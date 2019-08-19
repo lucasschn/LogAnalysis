@@ -114,7 +114,6 @@ N = len(acc_z) # number of data points
 dt = np.mean(np.diff(time_vlp)) # average sampling time in
 freq = fftfreq(N,dt)*360/(2*math.pi) # Hz
 
-
 # computing the amplitudes of the accelerations
 acc_x_complex_spectrum = fft(acc_x, N)
 acc_x_complex_spectrum = acc_x_complex_spectrum
