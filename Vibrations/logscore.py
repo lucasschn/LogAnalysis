@@ -83,10 +83,14 @@ def logscore(time,acc_x,acc_y,acc_z,roll,pitch,yaw):
     return scores
 
 def addscore(log_file,scores):
-    csv_file = open('log_scores.csv','a')
-    writer = csv.writer(csv_file)
-    if not csv_file.readline == 'Log File, Acc score, Peak score, HF score':
+    csv_file = open('log_scores.csv','r')
+    if not csv_file.readline() == 'Log File,Acc score,Peak score,HF score\n':
+        csv_file = open('log_scores.csv','w')
+        writer = csv.writer(csv_file)
         writer.writerow(['Log File', 'Acc score', 'Peak score', 'HF score'])
+    else:
+        csv_file = open('log_scores.csv','a')
+        writer = csv.writer(csv_file)
     writer.writerow([log_file,scores['acc_score'],scores['peak_score'],scores['hf_score']])
 
 # path constructor
