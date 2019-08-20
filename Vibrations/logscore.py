@@ -99,4 +99,3 @@ for file in files:
     info = logextract(log_file)
     scores = logscore(info['time'],info['acc_x'],info['acc_y'],info['acc_z'],info['roll'],info['pitch'],info['yaw'])
     addscore(log_file,scores)
-
