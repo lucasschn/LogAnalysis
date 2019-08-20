@@ -83,6 +83,7 @@ def logscore(time,acc_x,acc_y,acc_z,roll,pitch,yaw):
     return scores
 
 def addscore(log_file,scores):
+    """ Adds the score results scores of the file log_file to the file log_scores.csv """
     csv_file = open('log_scores.csv','r')
     if not csv_file.readline() == 'Log File,Acc score,Peak score,HF score\n':
         csv_file = open('log_scores.csv','w')
