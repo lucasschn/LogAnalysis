@@ -12,33 +12,44 @@ log_date = '2019-08-14'
 log_time = '13_14_23'
 log_file = f'{log_path}/{log_date}/{log_time}.ulg'
 
-# for real logs
+# for logs downloaded with QGC
 log_path = '/home/lucas/Documents/Log_Analysis/Vibrations/Logs'
 log_index = '270'
 log_date = '2019-8-19'
 log_time = '14-20-40'
 log_file = f'{log_path}/log_{log_index}_{log_date}-{log_time}.ulg'
 
+# custom path
+# log_file = f'{log_path}/13_49_01.ulg'
+
 # creates a ULog object with the relevant topics
 ulog = pyulog.ULog(log_file,['sensor_combined','actuator_outputs']) 
 datalist = ulog.data_list # is a list of Data objects, which contain the final topic data for a single topic and instance
-data_sc = datalist[0].data # is a dictionnary
-data_rpm = datalist[2].data # the first one is Aux
+for topic in datalist:
+        if topic.name == 'sensor_combined':
+                data_sc = topic.data
+        elif topic.name == 'actuator_outputs':
+                if np.all(topic.data['noutputs'] <= 1):
+                        continue
+                else:
+                         data_ao = topic.data
+        elif topic.name == 'vehicle_local_position_setpoint':
+                data_vlps = topic.data
+        elif topic.name == 'vehicle_land_detected':
+                data_vld = topic.data
+
 
 time_sc = data_sc['timestamp']/1e6 # convert it from us to s
-time_ao = data_rpm['timestamp']/1e6 
+time_ao = data_ao['timestamp']/1e6 
 acc_x=data_sc['accelerometer_m_s2[0]']
 acc_y=data_sc['accelerometer_m_s2[1]']
 acc_z=data_sc['accelerometer_m_s2[2]']
 roll = data_sc['gyro_rad[0]']
 pitch = data_sc['gyro_rad[1]']
 yaw = data_sc['gyro_rad[2]']
-rpm1 = data_rpm['output[0]']
-rpm2 = data_rpm['output[1]']
-rpm3 = data_rpm['output[2]']
-rpm4 = data_rpm['output[3]']
-rpm5 = data_rpm['output[4]']
-rpm6 = data_rpm['output[5]']
+rpm = {}
+for k in range(np.unique(data_ao['noutputs']).item()):
+        rpm[k+1] = data_ao[f'output[{k}]']
 
 # a reasonable threshold for strong vibration is anything with a peak-to-peak of more than 2-3 m/s/s 
 # (http://docs.px4.io/master/en/log/flight_log_analysis.html)
@@ -114,32 +125,26 @@ N = len(acc_z) # number of data points
 dt = np.mean(np.diff(time_sc)) # average sampling time in
 freq = rfftfreq(N,dt) # Hz
 
+def ampspectrum(x):
+    """ returns the magnitudes of the fft for a real x"""
+    complex_spectrum = rfft(x)
+    X = np.abs(complex_spectrum)
+    return X
+
+# computing the frequency range of the accelerations
+N = len(acc_z) # number of data points
+dt = np.mean(np.diff(time)) # average sampling time in
+freq = rfftfreq(N,dt) # Hz
+
 # computing the amplitudes of the accelerations
-acc_x_complex_spectrum = rfft(acc_x)
-acc_x_complex_spectrum = acc_x_complex_spectrum
-Ax = np.abs(acc_x_complex_spectrum)
-
-acc_y_complex_spectrum = rfft(acc_y)
-acc_y_complex_spectrum = acc_y_complex_spectrum
-Ay = np.abs(acc_y_complex_spectrum)
-
-acc_z_complex_spectrum = rfft(acc_z)
-acc_z_complex_spectrum = acc_z_complex_spectrum
-Az = np.abs(acc_z_complex_spectrum)
+Ax = ampspectrum(acc_x)
+Ay = ampspectrum(acc_y)
+Az = ampspectrum(acc_z)
 
 # computing the amplitudes of the angles
-roll_complex_spectrum = rfft(roll)
-roll_complex_spectrum = roll_complex_spectrum
-R = np.abs(roll_complex_spectrum)
-
-pitch_complex_spectrum = rfft(pitch)
-pitch_complex_spectrum = pitch_complex_spectrum
-P = np.abs(pitch_complex_spectrum)
-
-yaw_complex_spectrum = rfft(yaw)
-yaw_complex_spectrum = yaw_complex_spectrum
-Y = np.abs(yaw_complex_spectrum)
-
+R = ampspectrum(roll)
+P = ampspectrum(pitch)
+Y = ampspectrum(yaw)
 
 # Figure 4 : frequency spectrum of the acceleration
 plt.figure()
@@ -217,7 +222,10 @@ print(f'acc score : {acc_score}') # should be above 0.5
 
 # score calculation for angles spectrum
 max_peak_score = peak_limit*np.sum((P>=hf_limit) | (R>=hf_limit) | (Y>=hf_limit))
-peak_score = np.sum([peak_limit - freq[np.argmax([P[index],R[index],Y[index]])] for index in range(N//2) if ((P[index]>=hf_limit) |(R[index]>=hf_limit) |(Y[index]>=hf_limit))])/max_peak_score
+if max_peak_score == 0:
+        peak_score=1
+else:
+        peak_score = np.sum([peak_limit - freq[np.argmax([P[index],R[index],Y[index]])] for index in range(N//2) if ((P[index]>=hf_limit) |(R[index]>=hf_limit) |(Y[index]>=hf_limit))])/max_peak_score
 print(f'peak score :{peak_score}')
 
 max_hf_score = hf_limit*(N - np.argmax(freq.__gt__(peak_limit)))
