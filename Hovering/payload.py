@@ -36,7 +36,7 @@ def addhover(log_file,avg_hovering):
 log_path = '/home/lucas/Documents/Log_Analysis/Logs'
 log_index = '270'
 log_date = '2019-8-19'
-log_time = '14-20-40'
+log_time = '14-33-43'
 test_file = f'{log_path}/log_{log_index}_{log_date}-{log_time}.ulg'
 
 files = os.listdir(log_path)

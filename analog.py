@@ -2,6 +2,7 @@ import pyulog
 import numpy as np
 import pandas as pd
 from pyulgresample.ulogdataframe import DfUlg, TopicMsgs
+import datetime
 
 class LogError(Exception):
     def __str__(self):
@@ -28,45 +29,53 @@ def avghover(path):
 
     z = dfulg.df['T_vehicle_local_position_0__F_z']
 
-    rpm1 = dfulg.df[f'T_actuator_outputs_0__{msglist[0]}']
-    rpm2 = dfulg.df[f'T_actuator_outputs_0__{msglist[1]}']
-    rpm3 = dfulg.df[f'T_actuator_outputs_0__{msglist[2]}']
-    rpm4 = dfulg.df[f'T_actuator_outputs_0__{msglist[3]}']
-    rpm5 = dfulg.df[f'T_actuator_outputs_0__{msglist[4]}']
-    rpm6 = dfulg.df[f'T_actuator_outputs_0__{msglist[5]}']
-
-    T = dfulg.df[f'T_vehicle_local_position_setpoint_0__F_thrust_2']
-
-    stick_in_x = dfulg.df['T_manual_control_setpoint_0__F_x']
-    stick_in_y = dfulg.df['T_manual_control_setpoint_0__F_y']
-    stick_in_z = dfulg.df['T_manual_control_setpoint_0__F_z']
-
-    navstate = dfulg.df['T_vehicle_status_0__F_nav_state']
-
-
-    hovering_bool=[]
-
-    for k in range(len(navstate)):
-        hovering_bool.append(ishover(navstate[k],stick_in_x[k],stick_in_y[k],stick_in_z[k]))
-
-    if not np.any(hovering_bool and z < -1):
+    if (z.index[-1]-z.index[0]) < datetime.timedelta(minutes=1):
         
-        raise LogError(f'The drone does not hover in log {path}. \n Consider discarding this file.')
+        raise LogError(f'Log {path} is too short (less than 1 minute). Consider discarding.')
     
-    else:
-        max_alt = -np.min(z[np.isnan(z) == False][0]-z[np.isnan(z) == False])
-        average_hovering_rpm1 = np.mean(rpm1[hovering_bool and max_alt<1])
-        average_hovering_rpm2 = np.mean(rpm2[hovering_bool and max_alt<1])
-        average_hovering_rpm3 = np.mean(rpm3[hovering_bool and max_alt<1])
-        average_hovering_rpm4 = np.mean(rpm4[hovering_bool and max_alt<1])
-        average_hovering_rpm5 = np.mean(rpm5[hovering_bool and max_alt<1])
-        average_hovering_rpm6 = np.mean(rpm6[hovering_bool and max_alt<1])
+    else :
 
-        average_hovering_zthrust = np.mean(T[hovering_bool and z < -1])
+        rpm1 = dfulg.df[f'T_actuator_outputs_0__{msglist[0]}']
+        rpm2 = dfulg.df[f'T_actuator_outputs_0__{msglist[1]}']
+        rpm3 = dfulg.df[f'T_actuator_outputs_0__{msglist[2]}']
+        rpm4 = dfulg.df[f'T_actuator_outputs_0__{msglist[3]}']
+        rpm5 = dfulg.df[f'T_actuator_outputs_0__{msglist[4]}']
+        rpm6 = dfulg.df[f'T_actuator_outputs_0__{msglist[5]}']
 
-        average_hovering_rpm = np.mean([average_hovering_rpm1,average_hovering_rpm2,average_hovering_rpm3,average_hovering_rpm4,average_hovering_rpm5,average_hovering_rpm6])
+        T = dfulg.df[f'T_vehicle_local_position_setpoint_0__F_thrust_2']
 
-        average_hovering = {'rpm': average_hovering_rpm, 'zthrust': average_hovering_zthrust}
+        stick_in_x = dfulg.df['T_manual_control_setpoint_0__F_x']
+        stick_in_y = dfulg.df['T_manual_control_setpoint_0__F_y']
+        stick_in_z = dfulg.df['T_manual_control_setpoint_0__F_z']
+
+        navstate = dfulg.df['T_vehicle_status_0__F_nav_state']
+
+
+        hovering_bool=[]
+
+        for k in range(len(navstate)):
+            hovering_bool.append(ishover(navstate[k],stick_in_x[k],stick_in_y[k],stick_in_z[k]))
+
+        alt = -(z[np.isnan(z) == False][0] - z) # altitude relative to the first non-nan local z-position
+        max_alt = np.max(alt)
+
+        if not np.any(hovering_bool and max_alt < 1):
+            
+            raise LogError(f'The drone does not hover in log {path}. \n Consider discarding this file.')
+        
+        else:
+            average_hovering_rpm1 = np.mean(rpm1[hovering_bool and alt < 1])
+            average_hovering_rpm2 = np.mean(rpm2[hovering_bool and alt < 1])
+            average_hovering_rpm3 = np.mean(rpm3[hovering_bool and alt < 1])
+            average_hovering_rpm4 = np.mean(rpm4[hovering_bool and alt < 1])
+            average_hovering_rpm5 = np.mean(rpm5[hovering_bool and alt < 1])
+            average_hovering_rpm6 = np.mean(rpm6[hovering_bool and alt < 1])
+
+            average_hovering_zthrust = np.mean(T[hovering_bool and alt < 1])
+
+            average_hovering_rpm = np.mean([average_hovering_rpm1,average_hovering_rpm2,average_hovering_rpm3,average_hovering_rpm4,average_hovering_rpm5,average_hovering_rpm6])
+
+            average_hovering = {'rpm': average_hovering_rpm, 'zthrust': average_hovering_zthrust}
 
         return average_hovering
 
@@ -102,7 +111,7 @@ def logextract(path,topic_list):
                     continue
                 else:                     
                     data_ao = topic.data
-                    time_ao = data_ao['timestamp']
+                    time_ao = data_ao['timestamp']/1e6
                     columns = ['motor 1','motor 2','motor 3','motor 4','motor 5','motor 6']
                     rpm=[]
                     for k in range(np.unique(data_ao['noutputs']).item()):
@@ -111,7 +120,9 @@ def logextract(path,topic_list):
                     info.update({'time_ao':time_ao,'rpm': rpm,'rpm_df': rpm_df})
         elif topic.name == 'vehicle_local_position_setpoint':
             data_vlps = topic.data
+            time_vlps = data_vlps['timestamp']/1e6
             vert_thrust = data_vlps['thrust[2]']
+            info.update({'time_vlps': time_vlps, 'vert_thrust': vert_thrust})
         elif topic.name == 'vehicle_status':
             data_vs = topic.data
             time_vs = data_vs['timestamp']/1e6
@@ -126,4 +137,9 @@ def logextract(path,topic_list):
             stick_in_y = data_mcs['y']
             stick_in_z = data_mcs['z']
             info.update({'time_mcs':time_mcs,'stick_in_x': stick_in_x, 'stick_in_y': stick_in_y, 'stick_in_z': stick_in_z})
+        elif topic.name == 'battery_status':
+            data_bs = topic.data
+            time_bs = data_bs['timestamp']/1e6
+            battery_current = data_bs['current_a']    
+            info.update({'time_bs':time_bs, 'battery_current':battery_current})
     return info
