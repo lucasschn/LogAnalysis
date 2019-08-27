@@ -1,5 +1,6 @@
 import pyulog
 import numpy as np
+from numpy.fft import rfft as rfft, rfftfreq as rfftfreq
 import pandas as pd
 from pyulgresample.ulogdataframe import DfUlg, TopicMsgs
 import datetime
@@ -15,6 +16,8 @@ def ampspectrum(x):
     return X
 
 def avghover(path):
+    """ Compatible with pyulgresample"""
+
     topic_list = []
     topic_list.append('vehicle_status')
     topic_list.append('actuator_outputs')
@@ -89,8 +92,15 @@ def ishover(navstate,stick_in_x,stick_in_y,stick_in_z):
         ishover = True
     return ishover
 
+default_topic_list = []
+default_topic_list.append('sensor_combined')
+default_topic_list.append('actuator_outputs')
+default_topic_list.append('vehicle_local_position_setpoint')
+default_topic_list.append('vehicle_status')
+default_topic_list.append('vehicle_land_detected')
+default_topic_list.append('manual_control_setpoint')
 
-def logextract(path,topic_list):
+def logextract(path,topic_list=default_topic_list):
     """ Returns an info dictionnary containing the relevant information in the log "path" according to "topic_list" """
     ulog = pyulog.ULog(path,topic_list) 
     datalist = ulog.data_list # is a list of Data objects, which contain the final topic data for a single topic and instance
@@ -106,6 +116,7 @@ def logextract(path,topic_list):
             pitch = data_sc['gyro_rad[1]']
             yaw = data_sc['gyro_rad[2]']
             info.update({'time_sc':time_sc, 'acc_x':acc_x, 'acc_y':acc_y,'acc_z':acc_z, 'roll': roll, 'pitch': pitch, 'yaw': yaw})
+            info.update (sixaxes_spectrum(info))
         elif topic.name == 'actuator_outputs':
                 if (np.all(topic.data['noutputs'] <= 1)): 
                     continue
@@ -143,3 +154,66 @@ def logextract(path,topic_list):
             battery_current = data_bs['current_a']    
             info.update({'time_bs':time_bs, 'battery_current':battery_current})
     return info
+
+def logscore(info):
+    """ Returns the acceleration score, the peak score and the high-frequencies score computed for the parameters passed as arguments."""
+
+    time = info['time_sc'] # in s
+    acc_x = info['acc_x']
+    acc_y = info['acc_y'] 
+    acc_z = info['acc_z']
+    roll = info['roll']
+    pitch = info['pitch'] 
+    yaw = info['yaw']
+    N = len(acc_z)
+    spectrum = sixaxes_spectrum(info)
+
+
+    if (time[-1]-time[0]) < 60:
+        raise LogError(f'Time series are too short (less than 1 minute). Consider discarding.')
+    else:
+        # score calculation for raw acceleration 
+        # we want to count the blank area between the zacc and the xacc or yacc as positive points, if they overlap as negative
+        max_acc_score = 9.81*len(time) # having constantly the z at gravity and x,y at 0
+        acc_score = sum(np.min([acc_x[index],acc_y[index]])-acc_z[index] for index in range(len(time)))/max_acc_score
+        print(f'acc score : {acc_score}') # should be above 0.5
+
+        peak_limit = 20 #Hz
+        hf_limit = 500 #amplitude
+
+        # score calculation for angles spectrum
+        max_peak_score = peak_limit*np.sum((info['P']>=hf_limit) | (info['R']>=hf_limit) | (info['Y']>=hf_limit))
+        if max_peak_score == 0:
+            peak_score=1
+        else:
+            peak_score = np.sum([peak_limit - info['freq'][np.argmax([info['P'][index],info['R'][index],info['Y'][index]])] for index in range(N//2) if ((info['P'][index]>=hf_limit) |(info['R'][index]>=hf_limit) |(info['Y'][index]>=hf_limit))])/max_peak_score
+        print(f'peak score :{peak_score}')
+
+        max_hf_score = hf_limit*(N - np.argmax(info['freq'].__gt__(peak_limit)))
+        # for each frequency above peak_limit, take the distance between hf_limit and the highest curve and sum them
+        hf_score = np.sum([hf_limit - np.max([info['R'][index],info['P'][index],info['Y'][index]]) for index in range(N//2) if (info['freq'][index]>peak_limit) ])/max_hf_score
+        print(f'hf score : {hf_score}')
+
+        scores = {'acc_score': acc_score,'peak_score': peak_score,'hf_score': hf_score}
+        return scores
+
+def sixaxes_spectrum(info):
+    """ Takes an info dictionnary and returns the fft for the six axes """ 
+    # computing the frequency range of the accelerations
+    N = len(info['acc_z']) # number of data points
+    dt = np.mean(np.diff(info['time_sc'])) # average sampling time in
+    freq = rfftfreq(N,dt) # Hz
+
+    # computing the amplitudes of the accelerations
+    Ax = ampspectrum(info['acc_x'])
+    Ay = ampspectrum(info['acc_y'])
+    Az = ampspectrum(info['acc_z'])
+
+    # computing the amplitudes of the angles
+    R = ampspectrum(info['roll'])
+    P = ampspectrum(info['pitch'])
+    Y = ampspectrum(info['yaw'])
+
+    spectrum = {'freq': freq, 'Ax': Ax, 'Ay': Ay,  'Az': Az, 'R': R, 'P': P, 'Y': Y}
+    
+    return spectrum
