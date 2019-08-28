@@ -10,7 +10,6 @@ sys.path.append('/home/lucas/Documents/Log_Analysis')
 
 from analog import logextract as logextract, logscore as logscore, sixaxes_spectrum as sixaxes_spectrum
 
-
 # for logs created by gazebo (simulation)
 log_path = '/home/lucas/src/px4/Firmware/build/px4_sitl_default/tmp/rootfs/log'
 log_date = '2019-08-14'
@@ -29,8 +28,8 @@ log_file = f'{log_path}/log_{log_index}_{log_date}-{log_time}.ulg'
 
 info = logextract(log_file)
 
-time_sc = info['time_sc']/1e6 # convert it from us to s
-time_ao = info['time_ao']/1e6 
+time_sc = info['time_sc'] # already in s
+time_ao = info['time_ao'] 
 acc_x=info['acc_x']
 acc_y=info['acc_y']
 acc_z=info['acc_z']
@@ -103,14 +102,14 @@ plt.axis([None, None, time_ao[0], time_ao[-1]])
 plt.xlabel('rotation speed (Hz)')
 plt.ylabel('time (s)')
 plt.grid()
-plt.legend()
+plt.legend(loc='SouthEast')
 plt.savefig(f'{savedir}/Hz_{log_time}.png')
 plt.show()
 
 
 # computing the frequency range of the accelerations
 N = len(acc_z) # number of data points
-dt = np.mean(np.diff(time_sc)) # average sampling time in
+dt = np.mean(np.diff(time_sc)) # average sampling time in s
 freq = rfftfreq(N,dt) # Hz
 
 spectrum = sixaxes_spectrum(info)
