@@ -151,8 +151,14 @@ def logextract(path,topic_list=default_topic_list):
         elif topic.name == 'battery_status':
             data_bs = topic.data
             time_bs = data_bs['timestamp']/1e6
-            battery_current = data_bs['current_a']    
-            info.update({'time_bs':time_bs, 'battery_current':battery_current})
+            battery_current = data_bs['current_a']
+            battery_voltage = data_bs['voltage_v']
+            battery_filtered_current = data_bs['current_filtered_a']
+            battery_filtered_voltage = data_bs['voltage_filtered_v']
+            discharged_mah = data_bs['discharged_mah']
+            remaining = data_bs['remaining']
+            n_cells = data_bs['cell_count']    
+            info.update({'time_bs':time_bs,'n_cells':n_cells, 'battery_current':battery_current, 'battery_filtered_current': battery_filtered_current,'battery_voltage': battery_voltage, 'battery_filtered_voltage':battery_filtered_voltage, 'discharged_mah': discharged_mah,'remaining': remaining})
     return info
 
 def logscore(info):
