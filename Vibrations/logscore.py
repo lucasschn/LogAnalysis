@@ -6,7 +6,7 @@ import os
 import sys 
 sys.path.append('/home/lucas/Documents/Log_Analysis')
 
-from analog import logextract as logextract, logscore as logscore, ampspectrum as ampspectrum
+from analog import logextract as logextract, logscore as logscore, ampspectrum as ampspectrum, LogError
 
 topic_list = []
 topic_list.append('sensor_combined')
@@ -47,6 +47,10 @@ files = os.listdir(log_path)
 for file in files:
     log_file = f'{log_path}/{file}'
     print(log_file)
-    info = logextract(log_file,topic_list)
-    scores = logscore(info['time_sc'],info['acc_x'],info['acc_y'],info['acc_z'],info['roll'],info['pitch'],info['yaw'])
-    addscore(log_file,scores)
+    try :
+        info = logextract(log_file,topic_list)
+        scores = logscore(info)
+        addscore(log_file,scores)
+    except LogError:
+        print(f'{log_file} is not relevant. Discarded.')
+        continue

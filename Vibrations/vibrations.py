@@ -10,21 +10,18 @@ sys.path.append('/home/lucas/Documents/Log_Analysis')
 
 from analog import logextract as logextract, logscore as logscore, sixaxes_spectrum as sixaxes_spectrum
 
-# for logs created by gazebo (simulation)
-log_path = '/home/lucas/src/px4/Firmware/build/px4_sitl_default/tmp/rootfs/log'
-log_date = '2019-08-14'
-log_time = '13_14_23'
-log_file = f'{log_path}/{log_date}/{log_time}.ulg'
 
-# for logs downloaded with QGC
-log_path = '/home/lucas/Documents/Log_Analysis/Logs'
-log_index = '38'
-log_date = '2019-8-27'
-log_time = '14-18-14'
-log_file = f'{log_path}/log_{log_index}_{log_date}-{log_time}.ulg'
+### TO BE  DEFINED BY USER ###
 
-# custom path
-# log_file = f'{log_path}/13_49_01.ulg'
+gazebopath = '/home/lucas/src/px4/Firmware/build/px4_sitl_default/tmp/rootfs/log'
+
+# 1. Enter the path to the log file to be anaylzed here.
+log_file = analog.pathfromQGC('/home/lucas/Documents/Log_Analysis/Logs',index,date,time)
+
+# 2. Enter the path where the figures should be saved here.
+savedir = f'/home/lucas/Documents/Log_Analysis/Vibrations/Figures/{log_date}'
+
+### NO NEED TO MODIFY CODE AFTER THIS LINE ###
 
 info = logextract(log_file)
 
@@ -56,9 +53,6 @@ plt.ylabel('raw acceleration (m/s$^2$)')
 plt.grid()
 plt.legend()
 plt.axis([time_sc[0], time_sc[-1], -30, 20])
-
-# creating a new directory if savedir does not exist and saving the figure
-savedir = f'/home/lucas/Documents/Log_Analysis/Vibrations/Figures/{log_date}'
 
 if not os.path.isdir(savedir):
     os.makedirs(savedir)

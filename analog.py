@@ -4,6 +4,7 @@ from numpy.fft import rfft as rfft, rfftfreq as rfftfreq
 import pandas as pd
 from pyulgresample.ulogdataframe import DfUlg, TopicMsgs
 import datetime
+import os
 
 class LogError(Exception):
     def __str__(self):
@@ -179,10 +180,12 @@ def logscore(info):
         raise LogError(f'Time series are too short (less than 1 minute). Consider discarding.')
     else:
         # score calculation for raw acceleration 
-        # we want to count the blank area between the zacc and the xacc or yacc as positive points, if they overlap as negative
-        max_acc_score = 9.81*len(time) # having constantly the z at gravity and x,y at 0
-        acc_score = sum(np.min([acc_x[index],acc_y[index]])-acc_z[index] for index in range(len(time)))/max_acc_score
-        print(f'acc score : {acc_score}') # should be above 0.5
+        meanstd = np.mean([np.std(acc_x),np.std(acc_y),np.std(acc_z)])
+        a = 5
+        b = 0.1
+        alpha = -np.log(b)/a # in order to get a score of b for a standard deviation of a
+        acc_score = np.exp(-alpha*meanstd)
+        print(f'acc score : {acc_score}')   
 
         peak_limit = 20 #Hz
         hf_limit = 500 #amplitude
@@ -202,6 +205,41 @@ def logscore(info):
 
         scores = {'acc_score': acc_score,'peak_score': peak_score,'hf_score': hf_score}
         return scores
+
+def pathfromgazebo(folder,date,time):
+    ''' Returns the path to a log file created by gazebo at specified date (YYYY-MM-DD) and time (HH_MM_SS) in the specified foder. '''
+    # folder should be something like '/home/lucas/src/px4/Firmware/build/px4_sitl_default/tmp/rootfs/log'
+    path = f'{folder}/{date}/{time}.ulg'
+    return path
+
+# default arguments for pathfromQGC
+index = -1 
+date = -1 
+time = -1
+
+def pathfromQGC(folder,index=index,date=date,time=time):
+    ''' Returns path to a log file imported from QGroundControl in given folder, either by its index or by its creation date (YYYY-M-D) and time (HH-MM-SS).'''
+    # for logs downloaded with QGC
+    files = os.listdir(folder)
+    found = False
+    if index == -1: 
+        # retrieve file based on date and time
+        for file in files:
+            if file.find(f'_{date}-{time}.ulg'):
+                log_file = file
+                found = True
+    else:
+        # retrieve file based on index
+        for file in files:
+            if file.find(f'log_{index}')!=-1:
+                log_file = file
+                found = True
+
+    if found == False: 
+        # no file starts with log_{index} in the folder
+        print(f'The given date & time or index does not correspond to any file. Please verify it.' )
+    path = f'{folder}/{log_file}'
+    return path 
 
 def sixaxes_spectrum(info):
     """ Takes an info dictionnary and returns the fft for the six axes """ 
