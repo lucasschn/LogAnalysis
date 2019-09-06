@@ -45,9 +45,11 @@ def avghover(path):
         rpm4 = dfulg.df[f'T_actuator_outputs_0__{msglist[3]}']
         rpm5 = dfulg.df[f'T_actuator_outputs_0__{msglist[4]}']
         rpm6 = dfulg.df[f'T_actuator_outputs_0__{msglist[5]}']
-
-        T = dfulg.df[f'T_vehicle_local_position_setpoint_0__F_thrust_2']
-
+        try:
+            T = dfulg.df[f'T_vehicle_local_position_setpoint_0__F_thrust_2']
+        except KeyError:
+            raise LogError(f'Log {path} does not contain position mode flight.')
+        
         stick_in_x = dfulg.df['T_manual_control_setpoint_0__F_x']
         stick_in_y = dfulg.df['T_manual_control_setpoint_0__F_y']
         stick_in_z = dfulg.df['T_manual_control_setpoint_0__F_z']
@@ -93,16 +95,16 @@ def ishover(navstate,stick_in_x,stick_in_y,stick_in_z):
         ishover = True
     return ishover
 
-default_topic_list = []
-default_topic_list.append('sensor_combined')
-default_topic_list.append('actuator_outputs')
-default_topic_list.append('vehicle_local_position_setpoint')
-default_topic_list.append('vehicle_status')
-default_topic_list.append('vehicle_land_detected')
-default_topic_list.append('manual_control_setpoint')
-
-def logextract(path,topic_list=default_topic_list):
+def logextract(path,topic_list=None):
     """ Returns an info dictionnary containing the relevant information in the log "path" according to "topic_list" """
+    if topic_list == None :
+        topic_list = []
+        topic_list.append('sensor_combined')
+        topic_list.append('actuator_outputs')
+        topic_list.append('vehicle_local_position_setpoint')
+        topic_list.append('vehicle_status')
+        topic_list.append('vehicle_land_detected')
+        topic_list.append('manual_control_setpoint')
     ulog = pyulog.ULog(path,topic_list) 
     datalist = ulog.data_list # is a list of Data objects, which contain the final topic data for a single topic and instance
     info = {}
