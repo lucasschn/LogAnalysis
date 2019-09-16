@@ -84,7 +84,7 @@ class Thevenin(Battery):
         ''' Defines the state-space model matrices for the battery. States are x1=z and x2=iR1'''  
         self.A = np.array([[1., 0.],[0.,  np.exp(-dt/(self.R1*self.C1))]], dtype=float)
         self.B = np.array([[-self.coulombic_efficiency*dt/self.total_capacity],[1 - np.exp(-dt/(self.R1*self.C1))]],dtype=float)
-        self.C = np.array([self.OCVcurve.getslope(self.z), -self.R1],dtype=float)
+        self.C = np.array([self.OCVcurve.getslope(self.z), -self.R1],dtype=float) # addition of v_empty is missing
         self.D = np.array([-self.R0],dtype=float)
 
     def reset(self,R0,R1,C1,z):
