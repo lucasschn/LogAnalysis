@@ -2,7 +2,10 @@ import pyulog
 import numpy as np
 from numpy.fft import rfft as rfft, rfftfreq as rfftfreq
 import pandas as pd
-from pyulgresample.ulogdataframe import DfUlg, TopicMsgs
+import sys 
+sys.path.append('/Users/Lucas/Documents/Travail/Yuneec/LogAnalysis')
+import pyulgresample.pyulgresample as pyulgresample
+from pyulgresample.pyulgresample.ulogdataframe import DfUlg, TopicMsgs
 import datetime
 import os
 
