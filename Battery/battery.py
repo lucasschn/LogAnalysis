@@ -18,17 +18,18 @@ class OCVcurve:
 
 
     def getslope(self,z):
-        sorted_SOC = self.SOC.sort_values()
-        slopes = np.diff(self.OCV)/np.diff(self.SOC)
-        for k in range(len(self.SOC)):
-            if z > sorted_SOC.iloc[-1] or z < sorted_SOC.iloc[0]:
-                raise ValueError(f'z={z} is out of range ({sorted_SOC.iloc[0]} - {sorted_SOC.iloc[-1]})')
-            elif z == sorted_SOC.iloc[-1]:
-                slope = slopes[-1]
-                break
-            elif z < sorted_SOC.iloc[k+1]:
-                slope = slopes[k]
-                break
+        slope = (self.OCVfromSOC(z+0.01)-self.OCVfromSOC(z-0.01))/0.02
+        # sorted_SOC = self.SOC.sort_values()
+        # slopes = np.diff(self.OCV)/np.diff(self.SOC)
+        # for k in range(len(self.SOC)):
+        #     if z > sorted_SOC.iloc[-1] or z < sorted_SOC.iloc[0]:
+        #         raise ValueError(f'z={z} is out of range ({sorted_SOC.iloc[0]} - {sorted_SOC.iloc[-1]})')
+        #     elif z == sorted_SOC.iloc[-1]:
+        #         slope = slopes[-1]
+        #         break
+        #     elif z < sorted_SOC.iloc[k+1]:
+        #         slope = slopes[k]
+        #         break
         return slope
 
 
