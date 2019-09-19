@@ -2,12 +2,80 @@ import numpy as np
 import pandas as pd
 from scipy.interpolate import interp1d as interp1d
 import matplotlib.pyplot as plt
+import datetime
+
+
+class segment:
+
+    def __init__(self,mode=None,path2csv=None):
+        self.time = np.array([])
+        self.cell_voltage = np.array([])
+        self.current = np.array([])
+        if mode == 'discharge' or mode == 'charge':
+            self.mode = mode
+        elif mode !=None: 
+            raise AttributeError('Argument ''mode'' has to be charge or discharge.')
+
+        if path2csv!=None:
+            self.fromcsv(path2csv)
+
+    def concatenate(self,seg2):
+        for k in range(len(seg2.stime)):
+            seg2.stime[k] += self.stime[-1] + 1.0
+        seg = segment()
+        seg.stime = self.stime + seg2.stime
+        seg.current = self.current.append(seg2.current)
+        seg.cell_voltage = self.cell_voltage.append(seg2.cell_voltage)
+        return seg
+
+    def count_charge(self):
+        dt = np.diff(self.stime)
+        self.dq = self.current[1:]*dt
+        self.Q = np.sum(self.dq) 
+
+    def makeseconds(self):
+        timelist = []
+        stime = []
+        for k in range(len(self.time)):
+            if len(self.time) < 3600 :
+                timelist.append(datetime.datetime.strptime(self.time[k],'             %M:%S,000'))  
+            elif len(self.time) < 24*3600 : 
+                timelist.append(datetime.datetime.strptime(self.time[k],'             %H:%M:%S,000'))
+            else :
+                timelist.append(datetime.datetime.strptime(self.time[k],'             %d %H:%M:%S,000'))
+            timedelta = timelist[k] - timelist[0]
+            stime.append(float(timedelta.total_seconds()))
+        self.stime = stime
+
+    def fromcsv(self,csv_file, sep=';', decimal=','):
+        self.df = pd.read_csv(csv_file, sep=sep, decimal=decimal, header=1,engine='python')
+        self.time = self.df['Time [hh:mm:ss.SSS]']
+        self.cell_voltage = self.df['CellVoltage 1 [V]']
+        self.current = self.df['Current [A]']
+        self.makeseconds()
+
+    def cplot(self,label=None):
+        if label!=None:
+            plt.plot(self.stime,self.current,label=label)
+        else:
+            plt.plot(self.stime,self.current)
+        plt.grid()
+
+    def vplot(self,label=None):
+        if label!=None:
+            plt.plot(self.stime,self.cell_voltage,label=label)
+        else:
+            plt.plot(self.stime,self.cell_voltage)
+        plt.grid()
 
 class OCVcurve: 
 
     def __init__(self,path2csv=None):
+        self.nb_segments = 0
+
         if path2csv != None :
-            self.setOCVfromcsv(path2csv)
+            self.setOCVfromcsv(path2csv)    
+
 
     def setOCVfromcsv(self,path):
         self.csv_file = pd.read_csv(path)
@@ -16,9 +84,15 @@ class OCVcurve:
         self.interpOCV = interp1d(self.SOC,self.OCV)
         self.interpSOC = interp1d(self.OCV,self.SOC)
 
+    def fromsegment(self,segment):
+        self.SOC = 1 - np.cumsum(segment.dq)/segment.Q
+        if segment.mode == 'charge':
+            self.OCV = segment.cell_voltage - current*R0
+        elif segment.mode == 'discharge':
+            self.OCV = segment.cell_voltage + current*R0
 
     def getslope(self,z):
-        slope = (self.OCVfromSOC(z+0.01)-self.OCVfromSOC(z-0.01))/0.02
+        slope = (self.OCVfromSOC(min(1.0,z+0.01))-self.OCVfromSOC(max(0.0,z-0.01)))/(min(1.0,z+0.01)-max(0.0,z-0.01))
         # sorted_SOC = self.SOC.sort_values()
         # slopes = np.diff(self.OCV)/np.diff(self.SOC)
         # for k in range(len(self.SOC)):
