@@ -26,12 +26,25 @@ class segment:
         seg.stime = self.stime + seg2.stime
         seg.current = self.current.append(seg2.current)
         seg.cell_voltage = self.cell_voltage.append(seg2.cell_voltage)
+        if self.mode == seg2.mode:
+            seg.mode = self.mode
+        else:
+            raise Warning('The segments do not have the same mode.')
         return seg
 
-    def count_charge(self):
+    def count_charge(self,z0):
         dt = np.diff(self.stime)
         self.dq = self.current[1:]*dt
         self.Q = np.sum(self.dq) 
+        pdseries_dict = {0:z0}
+        cumsum = np.cumsum(self.dq.values)
+        if self.mode == 'discharge':
+            for k in range(len(self.dq)):
+                pdseries_dict.update({k+1:z0 - cumsum[k]/self.Q})
+        elif self.mode == 'charge':
+            for k in range(len(self.dq)):
+                pdseries_dict.update({k+1:z0 + cumsum[k]/self.Q})
+        self.z = pd.Series(pdseries_dict)
 
     def makeseconds(self):
         timelist = []
@@ -68,6 +81,13 @@ class segment:
             plt.plot(self.stime,self.cell_voltage)
         plt.grid()
 
+    def zplot(self,label=None):
+        if label!=None:
+            plt.plot(self.stime,self.z,label=label)
+        else:
+            plt.plot(self.stime,self.z)
+        plt.grid()
+
 class OCVcurve: 
 
     def __init__(self,path2csv=None):
@@ -85,11 +105,18 @@ class OCVcurve:
         self.interpSOC = interp1d(self.OCV,self.SOC)
 
     def fromsegment(self,segment):
-        self.SOC = 1 - np.cumsum(segment.dq)/segment.Q
-        if segment.mode == 'charge':
-            self.OCV = segment.cell_voltage - current*R0
-        elif segment.mode == 'discharge':
-            self.OCV = segment.cell_voltage + current*R0
+        self.SOC = segment.z
+        self.OCV = segment.cell_voltage
+        self.current = segment.current
+        self.mode = segment.mode
+
+    def intrescorr(self,R0):
+        ''' Corrects OCV curve with internal resistance R0.'''
+        if self.mode == 'charge':
+            self.OCV = self.OCV - self.current*R0
+        elif self.mode == 'discharge':
+            self.OCV = self.OCV + self.current*R0
+        
 
     def getslope(self,z):
         slope = (self.OCVfromSOC(min(1.0,z+0.01))-self.OCVfromSOC(max(0.0,z-0.01)))/(min(1.0,z+0.01)-max(0.0,z-0.01))
@@ -105,7 +132,7 @@ class OCVcurve:
         #         slope = slopes[k]
         #         break
         return slope
-
+ 
 
     def OCVfromSOC(self,z):
         v = self.interpOCV(z)
@@ -117,7 +144,6 @@ class OCVcurve:
         return z
 
     def plot(self,color='b',linestyle='-'):
-        plt.figure()
         plt.plot(self.SOC,self.OCV,color=color,linestyle=linestyle)
         plt.xlabel('State of Charge (-)')
         plt.ylabel('Open Circuit Voltage (V)')
