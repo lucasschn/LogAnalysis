@@ -188,6 +188,40 @@ class Thevenin(Battery):
         self.C = np.array([self.OCVcurve.getslope(self.z), -self.R1],dtype=float) # addition of v_empty is missing
         self.D = np.array([-self.R0],dtype=float)
 
+
+    def lsim(self,time,current,OCVcurve,plot=False):
+
+        self.lsimt = time
+        self.lsimi = current
+        self.lsimdt = np.mean(np.diff(self.simt))
+
+        self.lsimx = np.array([[self.z],[0]])
+
+        self.lsimv = np.array([])             
+        for k in range(len(self.lsimt)):
+            
+            if k == 0:
+                self.lsimx = np.concatenate([self.lsimx,self.A@np.reshape(self.lsimx,(2,1)) + self.B*self.lsimi[k]],axis=1)
+                self.lsimv = self.C@np.reshape(self.lsimx[:,k],(2,1)) + self.D*self.lsimi[k]
+            else:
+                self.lsimx = np.concatenate([self.lsimx,self.A@np.reshape(self.lsimx[:,k],(2,1)) + self.B*self.lsimi[k]],axis=1)
+                self.lsimv = np.concatenate([self.lsimv,self.C@np.reshape(self.lsimx[:,k],(2,1)) + self.D*self.lsimi[k]])
+
+        if plot :
+            plt.figure()
+            plt.subplot(211)
+            plt.plot(time,self.lsimv,label='lin. sim.')
+            plt.legend()
+            plt.grid()
+            plt.ylabel('Cell voltage (V)')
+            plt.subplot(212) 
+            plt.plot(time,current)
+            plt.xlabel('time (s)')
+            plt.ylabel('Current (A)')
+            plt.grid()
+
+        return self.lsimv
+
     def reset(self,R0,R1,C1,z):
         self.R0 = R0
         self.R1 = R1
