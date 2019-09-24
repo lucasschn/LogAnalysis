@@ -258,3 +258,31 @@ class Thevenin(Battery):
             plt.grid()
 
         return self.simv
+
+
+    def kfinit(self):
+        self.xhat = np.array([[self.z],[0.]]) # is a stack of 2x1 arrays = a 2xk array
+        self.covx = np.array([[1e-4,0.],[0., .1]]) # is a stack of 2x2 arrays
+
+        self.covw = np.array([[0.05, 0.],[0., 0.]]) # is a constant 2x2 array
+        self.covv = 0.5017 # is a constant 1x1 array
+
+        self.u = 0 # is a stack of 1x1 arrays = a 1-D array
+        self.yhat = None 
+
+    def kfupdate(self,u,y):
+        #1a
+        self.xhat = np.reshape(self.A@self.xhat,(2,1)) + self.B*u
+        #1b
+        self.covx = self.A@self.covx@self.A.T + self.covw
+        #1c
+        self.yhat = self.OCVcurve.OCVfromSOC(self.xhat[0]) - self.R1*self.xhat[1] + self.D*u
+        #2a
+        covxy = np.reshape(self.covx@self.C.T,(2,1))
+        covy = self.C@self.covx@self.C.T + self.covv
+        L = covxy/covy
+        #2b
+        inno = y - self.yhat
+        self.xhat = np.reshape(self.xhat + L*inno,(2,1))
+        #2c
+        self.covx = self.covx - L*self.C@self.covx
