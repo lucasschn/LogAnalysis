@@ -236,7 +236,7 @@ class Thevenin(Battery):
         self.simz = []
         self.simz.append(self.z) 
         self.simi1 = [] 
-        self.simi1.append(self.simi[0])
+        self.simi1.append(0)
 
         self.simv = []             
         for k in range(len(self.simt)):
