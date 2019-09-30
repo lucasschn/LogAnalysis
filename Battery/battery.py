@@ -157,7 +157,7 @@ class Battery:
         self.coulombic_efficiency = eta
 
 
-    def setOCV(OCVcurve):
+    def setOCV(self,OCVcurve):
         self.OCVcurve = OCVcurve
 
 class Thevenin(Battery):
