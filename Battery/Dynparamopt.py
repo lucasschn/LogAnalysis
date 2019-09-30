@@ -53,11 +53,10 @@ def rmserror(x,voltage,prev_x):
     prev_x = x
     return rmserror
 
-
-def print_res(x):
-    print(x-prev_x)
-    prev_x = x
-    return False
+#def print_res(x):
+    #print(x-prev_x)
+    #prev_x = x
+    #return False
 
 # definition of the constraints
 # x = [R0, R1, C1, z[0], ... , z[n], iR1[0], ..., iR1[n], y[0], ... ,y[n]]
@@ -101,6 +100,6 @@ dt = np.mean(np.diff(time))
 
 # maximum of iterations
 opt = {'maxiter':30,'disp':True}
-results = optimize.minimize(rmserror,x0,args=(voltage, prev_x),method='SLSQP',constraints=cons,options=opt, bounds=bnd, callback=print_res)
+results = optimize.minimize(rmserror,x0,args=(voltage, prev_x),method='SLSQP',constraints=cons,options=opt, bounds=bnd)
 
 print(results)
