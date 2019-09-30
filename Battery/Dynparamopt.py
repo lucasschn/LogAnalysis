@@ -2,8 +2,8 @@ import numpy as np
 import pandas as pd
 import os
 import sys
-#sys.path.append('/home/lucas/Documents/Log_Analysis/Battery')
-sys.path.append('/Users/Lucas/Documents/Travail/Yuneec/LogAnalysis')
+sys.path.append('/home/lucas/Documents/Log_Analysis/Battery')
+#sys.path.append('/Users/Lucas/Documents/Travail/Yuneec/LogAnalysis')
 import analog
 import battery
 from scipy import optimize
@@ -15,9 +15,12 @@ iR10 = 0
 Q = 6000*3.6
 eta = 1
 
+# Test with polynomial curve
+p = np.polyfit(curve.SOC,curve.OCV,11)
+
 # define logs to optimize on
-#folder = '/home/lucas/Documents/Log_Analysis/Logs/Jack Sparrow (Luigi) z0=1'
-folder ='/Users/Lucas/Documents/Travail/Yuneec/Logs/Snow Orange (Battery 9) z0=1'
+folder = '/home/lucas/Documents/Log_Analysis/Logs/Snow Orange (Battery 9) z0=1'
+#folder ='/Users/Lucas/Documents/Travail/Yuneec/Logs/Snow Orange (Battery 9) z0=1'
 files = os.listdir(folder)
 
 time = np.array([])
@@ -54,10 +57,10 @@ def rmserror(x,voltage,prev_x):
     return rmserror
 
 
-def print_res(x):
-    print(x-prev_x)
-    prev_x = x
-    return False
+#def print_res(x,pr):
+    #print(x-prev_x)
+    #prev_x = x
+    #return False
 
 # definition of the constraints
 # x = [R0, R1, C1, z[0], ... , z[n], iR1[0], ..., iR1[n], y[0], ... ,y[n]]
@@ -81,11 +84,12 @@ for k in range(n):
     
     def state2_eq(x):
         #print('working ...')
-        return x[k+(n+1)+4]-np.exp(-dt/(x[1]*x[2]))*x[k+(n+1)+3]-(1-np.exp(-dt/(x[1]*x[2])))*current[k]
+        return x[n+k+5]-np.exp(-dt/(x[1]*x[2]))*x[k+n+4]-(1-np.exp(-dt/(x[1]*x[2])))*current[k]
     
     def output_eq(x):
         #print('working ...')
-        return curve.OCVfromSOC(x[k+3])-x[1]*x[k+(n+1)+3]-x[0]*current[k]-x[-n+k]
+        #return x[2*n+k+5]-curve.OCVfromSOC(x[k+3]) + x[1]*x[n+k+4] + x[0]*current[k]
+        return x[2*n+k+5]- np.polyval(p,x[k+3]) + x[1]*x[n+k+4] + x[0]*current[k]
     
     con1 = {'type':'eq','fun':state1_eq}   
     con2 = {'type':'eq','fun':state2_eq}   
@@ -100,7 +104,7 @@ bnd = tuple((0,None) for _ in range(len(x0)))
 dt = np.mean(np.diff(time))
 
 # maximum of iterations
-opt = {'maxiter':30,'disp':True}
-results = optimize.minimize(rmserror,x0,args=(voltage, prev_x),method='SLSQP',constraints=cons,options=opt, bounds=bnd, callback=print_res)
+opt = {'maxiter':1,'disp':True}
+results = optimize.minimize(rmserror,x0,args=(voltage, prev_x),method='SLSQP',constraints=cons,options=opt, bounds=bnd)
 
 print(results)
