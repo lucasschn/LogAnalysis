@@ -228,7 +228,7 @@ class Thevenin(Battery):
         self.C1 = C1   
         self.z = z     
 
-    def simulate(self,time,current,OCVcurve,plot=False):
+    def simulate(self,time,current,plot=False):
         self.simt = time
         self.simi = current
         self.simdt = np.mean(np.diff(self.simt))
@@ -242,7 +242,7 @@ class Thevenin(Battery):
         for k in range(len(self.simt)):
             self.simz.append(self.simz[k] - self.coulombic_efficiency*self.simdt/self.total_capacity * self.simi[k])
             self.simi1.append(np.exp(-self.simdt/(self.R1*self.C1)) * self.simi1[k] + (1 - np.exp(-self.simdt/(self.R1*self.C1)))*self.simi[k])
-            self.simv.append(OCVcurve.OCVfromSOC(self.simz[k]) - self.R1*self.simi1[k] - self.R0*self.simi[k])
+            self.simv.append(self.OCVcurve.OCVfromSOC(self.simz[k]) - self.R1*self.simi1[k] - self.R0*self.simi[k])
 
         if plot :
             plt.figure()

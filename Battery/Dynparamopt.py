@@ -57,10 +57,10 @@ def rmserror(x,voltage,prev_x):
     return rmserror
 
 
-#def print_res(x,pr):
-    #print(x-prev_x)
-    #prev_x = x
-    #return False
+def print_res(x,prev_x):
+    print(x-prev_x)
+    prev_x = x
+    return False
 
 # definition of the constraints
 # x = [R0, R1, C1, z[0], ... , z[n], iR1[0], ..., iR1[n], y[0], ... ,y[n]]
@@ -71,6 +71,7 @@ def initstate1_eq(x):
 
 def initstate2_eq(x):
     return x[n+4]
+    
 con1 = {'type':'eq','fun':initstate1_eq}   
 con2 = {'type':'eq','fun':initstate2_eq}    
 cons.append(con1)
@@ -105,6 +106,6 @@ dt = np.mean(np.diff(time))
 
 # maximum of iterations
 opt = {'maxiter':1,'disp':True}
-results = optimize.minimize(rmserror,x0,args=(voltage, prev_x),method='SLSQP',constraints=cons,options=opt, bounds=bnd)
+results = optimize.minimize(rmserror,x0,args=(voltage, prev_x),method='SLSQP',constraints=cons,options=opt, callback=print_res, bounds=bnd)
 
 print(results)
