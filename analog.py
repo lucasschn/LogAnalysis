@@ -122,9 +122,9 @@ def logextract(path,topic_list=None):
             acc_x=data_sc['accelerometer_m_s2[0]']
             acc_y=data_sc['accelerometer_m_s2[1]']
             acc_z=data_sc['accelerometer_m_s2[2]']
-            roll = data_sc['gyro_rad[0]'] # angular rates in rad/s
-            pitch = data_sc['gyro_rad[1]']
-            yaw = data_sc['gyro_rad[2]']
+            roll_rate = data_sc['gyro_rad[0]'] # angular rates in rad/s
+            pitch_rate = data_sc['gyro_rad[1]']
+            yaw_rate = data_sc['gyro_rad[2]']
             info.update({'time_sc':time_sc, 'acc_x':acc_x, 'acc_y':acc_y,'acc_z':acc_z, 'roll': roll, 'pitch': pitch, 'yaw': yaw})
             info.update (sixaxes_spectrum(info))
         elif topic.name == 'actuator_outputs':
@@ -149,12 +149,22 @@ def logextract(path,topic_list=None):
             y = data_vlp['y']
             z = data_vlp['z']
             info.update({'time_vlp':time_vlp,'x':x,'y':y,'z':z,'vx':vx,'vy':vy,'vz':vz})
+        elif topic.name == 'vehicle_gps_position':
+            data_vgp = topic.data
+            time_vgp = data_vgp['timetsamp']/1e6
+            heading = data_vgp['heading']
+            info.update({'heading':heading})
         elif topic.name == 'vehicle_local_position_setpoint':
             data_vlps = topic.data
             time_vlps = data_vlps['timestamp']/1e6
             x_thrust = data_vlps['thrust[0]']
             vert_thrust = data_vlps['thrust[2]']
             info.update({'time_vlps': time_vlps,'x_thrust': x_thrust, 'vert_thrust': vert_thrust})
+        elif topic.name == 'vehicle_attitude_setpoint':
+            data_vas = topic.data
+            time_vas = data_vas['timestamp']/1e6
+            pitch_sp = data_vas['pitch_body']
+            info.update({'time_vas': time_vas,'pitch_sp': pitch_sp})
         elif topic.name == 'vehicle_status':
             data_vs = topic.data
             time_vs = data_vs['timestamp']/1e6

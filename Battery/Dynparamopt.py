@@ -27,6 +27,7 @@ time = np.array([])
 current = np.array([])
 voltage = np.array([])
 tstoplist = [0]
+
 for file in sorted(files):
     print(file)
     info = analog.logextract(f'{folder}/{file}','battery_status')
@@ -42,62 +43,63 @@ ECparams = pd.read_csv('ECparams.csv')
 x0 = np.array([ECparams['R0'], ECparams['R1'], ECparams['C1']])
 initbat = battery.Thevenin(z0,Q,curve,ECparams['R0'],ECparams['R1'],ECparams['C1'])
 vsim = initbat.simulate(time,current,curve)
-x0 = np.append(x0,initbat.simz)
-x0 = np.append(x0,initbat.simi1)
-x0 = np.append(x0,initbat.simv)
-prev_x = x0
+#x0 = np.append(x0,initbat.simz)
+#x0 = np.append(x0,initbat.simi1)
+#x0 = np.append(x0,initbat.simv)
+#prev_x = x0
 print('Inititalizing optimization algortithm ...')
 
 # function to be minimized
-def rmserror(x,voltage,prev_x):
-    y = x[-n:]
+def rmserror(x):
+    #y = x[-n:]
+    y = initbat.simulate(time,current)
     rmserror = (np.mean((y-voltage)**2))**.5
-    print(x-prev_x)
-    prev_x = x
+    #print(x-prev_x)
+    #prev_x = x
     return rmserror
 
 
-def print_res(x,prev_x):
-    print(x-prev_x)
-    prev_x = x
-    return False
+#def print_res(x,prev_x):
+    #print(x-prev_x)
+    #prev_x = x
+    #return False
 
 # definition of the constraints
 # x = [R0, R1, C1, z[0], ... , z[n], iR1[0], ..., iR1[n], y[0], ... ,y[n]]
-cons = []
+#cons = []
 
-def initstate1_eq(x):
-    return x[3]-z0
+#def initstate1_eq(x):
+    #return x[3]-z0
 
-def initstate2_eq(x):
-    return x[n+4]
+#def initstate2_eq(x):
+    #return x[n+4]
     
-con1 = {'type':'eq','fun':initstate1_eq}   
-con2 = {'type':'eq','fun':initstate2_eq}    
-cons.append(con1)
-cons.append(con2)
+#con1 = {'type':'eq','fun':initstate1_eq}   
+#con2 = {'type':'eq','fun':initstate2_eq}    
+#cons.append(con1)
+#cons.append(con2)
 
-for k in range(n):
+#for k in range(n):
 
-    def state1_eq(x):
+    #def state1_eq(x):
         #print('working ...')
-        return x[k+4]-x[k+3]+eta*dt/Q*current[k]
+        #return x[k+4]-x[k+3]+eta*dt/Q*current[k]
     
-    def state2_eq(x):
+    #def state2_eq(x):
         #print('working ...')
-        return x[n+k+5]-np.exp(-dt/(x[1]*x[2]))*x[k+n+4]-(1-np.exp(-dt/(x[1]*x[2])))*current[k]
+        #return x[n+k+5]-np.exp(-dt/(x[1]*x[2]))*x[k+n+4]-(1-np.exp(-dt/(x[1]*x[2])))*current[k]
     
-    def output_eq(x):
+    #def output_eq(x):
         #print('working ...')
         #return x[2*n+k+5]-curve.OCVfromSOC(x[k+3]) + x[1]*x[n+k+4] + x[0]*current[k]
-        return x[2*n+k+5]- np.polyval(p,x[k+3]) + x[1]*x[n+k+4] + x[0]*current[k]
+        #return x[2*n+k+5]- np.polyval(p,x[k+3]) + x[1]*x[n+k+4] + x[0]*current[k]
     
-    con1 = {'type':'eq','fun':state1_eq}   
-    con2 = {'type':'eq','fun':state2_eq}   
-    con3 = {'type':'eq','fun':output_eq}   
-    cons.append(con1)
-    cons.append(con2)
-    cons.append(con3)
+    #con1 = {'type':'eq','fun':state1_eq}   
+    #con2 = {'type':'eq','fun':state2_eq}   
+    #con3 = {'type':'eq','fun':output_eq}   
+    #cons.append(con1)
+    #cons.append(con2)
+    #cons.append(con3)
 
 # definition of the bounds (the parameters and the variables cannot be negative)
 bnd = tuple((0,None) for _ in range(len(x0)))
@@ -106,6 +108,6 @@ dt = np.mean(np.diff(time))
 
 # maximum of iterations
 opt = {'maxiter':1,'disp':True}
-results = optimize.minimize(rmserror,x0,args=(voltage, prev_x),method='SLSQP',constraints=cons,options=opt, callback=print_res, bounds=bnd)
-
+#results = optimize.minimize(rmserror,x0,args=(voltage, prev_x),method='SLSQP',constraints=cons,options=opt, callback=print_res, bounds=bnd)
+results = optimize.differential_evolution(rmserror,bnd)
 print(results)
