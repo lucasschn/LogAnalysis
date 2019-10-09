@@ -3,12 +3,9 @@
 \title{H520 Battery State of Charge Estimator}
 
 
-\maketitle
-
-
 \begin{document} 
 
-\subtitle{State of charge and problem description}
+\section{State of charge and problem description}
 
 The aim of the project is to estimate precisely the state of charge $z(t)$ of a battery. Estimation is required because the state of charge is defined as \
 
@@ -19,12 +16,17 @@ The aim of the project is to estimate precisely the state of charge $z(t)$ of a 
 which is not possible to measure directly, as we are not opening the battery. The only available measurements to us are the current and the voltage measurement. In a battery electrical model, the \textit{current} $i(t)$ is considered as the input and the \textit{load} or \textit{terminal voltage} $v(t)$ is the output. Due to control system notations, this signals will sometimes be denoted $u(t)$ for the input and $y(t)$ for the output in the following.
 The state of charge is then equal to 1 when the battery holds as many charges as it can. This quantity of charges is denoted $Q$, and to when it is fully discharged. Sometimes, the concepts of fully charged and fully discharged can be a bit vague. That is why the full and empty state of charge are defined by the battery manufacturer. In the case of the H520, the battery states are defined as follows :
 
-\begin{table}{c|c|c}
+\begin{table}{h}
+\centering
+\begin{tabular}{c|c|c}
     State of charge & z & Open Circuit Voltage \\
-    Fully charged & 1 & 4.35V \\
-    Fully discharged & 0 & 3.56V \\
-\caption{Extreme SOC definition with respect to OCV}
+    \hline
+    Fully charged & 1 & 4.35 V \\
+    \hline
+    Fully discharged & 0 & 3.56 V \\
 \label{maxSOCOCV}
+\end{tabular}
+\caption{Extreme SOC definition with respect to OCV}
 \end{table}
 
 where the open circuit voltage is the value of the terminal voltage (measured by the voltage sensor) when the battery is at equlibrium, meaning that it has been rested for long enough. The state of charge evolves between 1 and 0 in direct correlation to the current that has been drawn from thre battery. The current acts as pumping charges out or in the reservoir of charge, the battery. 
@@ -38,7 +40,7 @@ One could say that \ref{SOCfromi} is enough to estimate the state of charge of a
 Unfortunately, the relationship between the state of charge and the terminal voltage to be measured is not starightforward and involves some king of modelisation of the battery. Indeed, the terminal voltage is a dydnamic quantity that is strongly influenced not only by how much current is drawn from the battery at this moment battery, but also on the current history. This is why a dynamic system model is needed. 
 
 
-\subtitle{Equivalent circuit model}
+\section{Equivalent circuit model}
 
 A battery is an electro-chemical system. It undergoes simultaneously electrical and chemical processes, such as ions diffusion, resistance-due voltage drops, etc. 
 
@@ -50,5 +52,6 @@ A basic system that contains enough dynamics to have a good overview of the role
 \item One pole pair of resistance-capacitor, plus one pole due to the integral effect of the state of charge on the input (the current), leading to a two poles system. 
 
 equations of the battery are : 
+\end{enumerate}
 
 \end{document}
