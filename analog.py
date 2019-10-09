@@ -5,12 +5,11 @@ import pandas as pd
 import sys 
 sys.path.append('/Users/Lucas/Documents/Travail/Yuneec/LogAnalysis')
 sys.path.append('/home/lucas/Documents/Log_Analysis')
-
-import pyulgresample.pyulgresample as pyulgresample
 # from work
-#from pyulgresample.ulogdataframe import DfUlg, TopicMsgs
+from pyulgresample.ulogdataframe import DfUlg, TopicMsgs
 # from home
-from pyulgresample.pyulgresample.ulogdataframe import DfUlg, TopicMsgs
+#import pyulgresample.pyulgresample as pyulgresample
+#from pyulgresample.pyulgresample.ulogdataframe import DfUlg, TopicMsgs
 import datetime
 import os
 
@@ -123,9 +122,9 @@ def logextract(path,topic_list=None):
             acc_x=data_sc['accelerometer_m_s2[0]']
             acc_y=data_sc['accelerometer_m_s2[1]']
             acc_z=data_sc['accelerometer_m_s2[2]']
-            roll = data_sc['gyro_rad[0]']
-            pitch = data_sc['gyro_rad[1]']
-            yaw = data_sc['gyro_rad[2]']
+            roll_rate = data_sc['gyro_rad[0]'] # angular rates in rad/s
+            pitch_rate = data_sc['gyro_rad[1]']
+            yaw_rate = data_sc['gyro_rad[2]']
             info.update({'time_sc':time_sc, 'acc_x':acc_x, 'acc_y':acc_y,'acc_z':acc_z, 'roll': roll, 'pitch': pitch, 'yaw': yaw})
             info.update (sixaxes_spectrum(info))
         elif topic.name == 'actuator_outputs':
@@ -140,11 +139,32 @@ def logextract(path,topic_list=None):
                         rpm.insert(k,data_ao[f'output[{k}]'])
                     rpm_df = pd.DataFrame(np.array([rpm[0],rpm[1],rpm[2],rpm[3],rpm[4],rpm[5]]).transpose(),index=range(len(time_ao)),columns=columns)
                     info.update({'time_ao':time_ao,'rpm': rpm,'rpm_df': rpm_df})
+        elif topic.name == 'vehicle_local_position':
+            data_vlp = topic.data
+            time_vlp = data_vlp['timestamp']/1e6
+            vx = data_vlp['vx']
+            vy = data_vlp['vy']
+            vz = data_vlp['vz']
+            x = data_vlp['x']
+            y = data_vlp['y']
+            z = data_vlp['z']
+            info.update({'time_vlp':time_vlp,'x':x,'y':y,'z':z,'vx':vx,'vy':vy,'vz':vz})
+        elif topic.name == 'vehicle_gps_position':
+            data_vgp = topic.data
+            time_vgp = data_vgp['timetsamp']/1e6
+            heading = data_vgp['heading']
+            info.update({'heading':heading})
         elif topic.name == 'vehicle_local_position_setpoint':
             data_vlps = topic.data
             time_vlps = data_vlps['timestamp']/1e6
+            x_thrust = data_vlps['thrust[0]']
             vert_thrust = data_vlps['thrust[2]']
-            info.update({'time_vlps': time_vlps, 'vert_thrust': vert_thrust})
+            info.update({'time_vlps': time_vlps,'x_thrust': x_thrust, 'vert_thrust': vert_thrust})
+        elif topic.name == 'vehicle_attitude_setpoint':
+            data_vas = topic.data
+            time_vas = data_vas['timestamp']/1e6
+            pitch_sp = data_vas['pitch_body']
+            info.update({'time_vas': time_vas,'pitch_sp': pitch_sp})
         elif topic.name == 'vehicle_status':
             data_vs = topic.data
             time_vs = data_vs['timestamp']/1e6
@@ -152,6 +172,11 @@ def logextract(path,topic_list=None):
             info.update({'time_vs': time_vs,'navstate': navstate})
         elif topic.name == 'vehicle_land_detected':
             data_vld = topic.data
+        elif topic.name == 'distance_sensor':
+            data_ds = topic.data
+            time_ds = data_ds['timestamp']/1e6
+            dist = data_ds['current_distance'] # current distance reading (m)
+            info.update({'time_ds':time_ds,'dist':dist})
         elif topic.name == 'manual_control_setpoint':
             data_mcs = topic.data
             time_mcs = data_mcs['timestamp']/1e6
