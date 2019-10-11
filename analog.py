@@ -241,9 +241,13 @@ def logscore(info):
         scores = {'acc_score': acc_score,'peak_score': peak_score,'hf_score': hf_score}
         return scores
 
-def pathfromgazebo(folder,date,time):
+def pathfromgazebo(date,time,firmware='yuneec'):
     ''' Returns the path to a log file created by gazebo at specified date (YYYY-MM-DD) and time (HH_MM_SS) in the specified foder. '''
-    # folder should be something like '/home/lucas/src/px4/Firmware/build/px4_sitl_default/tmp/rootfs/log'
+    # folder should be something like 
+    if firmware == 'yuneec':
+        folder = '/home/lucas/src/yuneec/Firmware/build/px4_sitl_default/tmp/rootfs/log'
+    elif firmware == 'px4':
+        folder = '/home/lucas/src/px4/Firmware/build/px4_sitl_default/tmp/rootfs/log'
     path = f'{folder}/{date}/{time}.ulg'
     return path
 
