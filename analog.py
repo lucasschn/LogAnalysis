@@ -125,7 +125,7 @@ def logextract(path,topic_list=None):
             roll_rate = data_sc['gyro_rad[0]'] # angular rates in rad/s
             pitch_rate = data_sc['gyro_rad[1]']
             yaw_rate = data_sc['gyro_rad[2]']
-            info.update({'time_sc':time_sc, 'acc_x':acc_x, 'acc_y':acc_y,'acc_z':acc_z, 'roll': roll, 'pitch': pitch, 'yaw': yaw})
+            info.update({'time_sc':time_sc, 'acc_x':acc_x, 'acc_y':acc_y,'acc_z':acc_z, 'roll_rate': roll_rate, 'pitch_rate': pitch_rate, 'yaw_rate': yaw_rate})
             info.update (sixaxes_spectrum(info))
         elif topic.name == 'actuator_outputs':
                 if (np.all(topic.data['noutputs'] <= 1)): 
@@ -293,9 +293,9 @@ def sixaxes_spectrum(info):
     Az = ampspectrum(info['acc_z'])
 
     # computing the amplitudes of the angles
-    R = ampspectrum(info['roll'])
-    P = ampspectrum(info['pitch'])
-    Y = ampspectrum(info['yaw'])
+    R = ampspectrum(info['roll_rate'])
+    P = ampspectrum(info['pitch_rate'])
+    Y = ampspectrum(info['yaw_rate'])
 
     spectrum = {'freq': freq, 'Ax': Ax, 'Ay': Ay,  'Az': Az, 'R': R, 'P': P, 'Y': Y}
     
