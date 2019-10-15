@@ -219,15 +219,19 @@ class DynParamOptimizer:
             Y[k] = y[k:k+j]
             U[k] = u[k:k+j]
 
+        print(f'U = {U}, shape {np.shape(U)}')
+        print(f'Y = {Y}, shape {np.shape(Y)}')
+
         # Compute the R factor
         UY = np.concatenate((U, Y))     # combine U and Y into one array
         q, r = np.linalg.qr(UY.T)       # QR decomposition
         R = r.T                         # transpose of upper triangle
-
+        print(f'R = {R}')
         # STEP 1: Calculate oblique and orthogonal projections
         # ------------------------------------------------------------------
 
         Rf = R[-i:]                                 # future outputs
+        print(f'Rf = {Rf}')
         Rp = np.concatenate((R[:i], R[2*i:3*i]))    # past inputs and outputs
         Ru = R[i:twoi, :twoi]                       # future inputs
 
@@ -281,17 +285,21 @@ class DynParamOptimizer:
         # ------------------------------------------------------------------
 
         gam = U1 * np.diag(np.sqrt(ss[:n]))
-        print(np.shape(gam))
-        gamm = gam[:i-2,:]
-        gam_inv = np.linalg.pinv(gam)[0]            # pseudo inverse of gam
+        print(f'gam = {gam}')
+        gamm = gam[:i-1,:]
+        print(f'pinv(gam) = {np.linalg.pinv(gam)}')
+        gam_inv = np.linalg.pinv(gam)[0]          # pseudo inverse of gam
         gamm2 = np.array([[gamm], [gamm]])
         gamm_inv = np.linalg.pinv(gamm2)[0][0]*2    # pseudo inverse of gamm
-
+        print(f'gam_inv = {gam_inv}')
         # STEP 5: Determine A matrix (also C, which is not used)
         # ------------------------------------------------------------------
-
+        print(gam_inv.dot(R[-i:,:-i]))
+        print(np.zeros(n))
         tm7 = np.concatenate((gam_inv.dot(R[-i:, :-i]), np.zeros(n)))
+        print(f'tm7 = {tm7}, shape {np.shape(tm7)}')
         tm8 = R[i:twoi, 0:3*i+1]
+        print(f'tm8 = {tm8}, shape {np.shape(tm8)}')
         Rhs = np.vstack((tm7, tm8))
         Lhs = np.vstack((gamm_inv*R[-i+1, :-i+1], R[-i, :-i+1]))
         sol = np.linalg.lstsq(Rhs.T, Lhs.T)[0].T    # solve least squares for [A; C]
