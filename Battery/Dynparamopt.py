@@ -101,7 +101,7 @@ def rmserror(x):
     #cons.append(con3)
 
 # definition of the bounds (the parameters and the variables cannot be negative)
-bnd = tuple((0,None) for _ in range(len(x0)))
+bnd = tuple((0,1000) for _ in range(len(x0)))
 
 dt = np.mean(np.diff(time))
 

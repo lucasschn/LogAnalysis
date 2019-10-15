@@ -8,11 +8,12 @@ path = '/home/lucas/Documents/Log_Analysis/Logs/Snow Orange (Battery 9) z0=1/log
 info = logextract(path,'battery_status')
 u = info['battery_current']
 y = info['battery_voltage']
+t = info['time_bs']
 
 csv_file = open('Battery 9/log_195.csv','w')
 writer = csv.writer(csv_file)
 
-writer.writerow(['u','y'])
+writer.writerow(['u','y','t'])
 for k in range(len(u)):
-    writer.writerow([u[k],y[k]])
+    writer.writerow([u[k],y[k],t[k]])
 
