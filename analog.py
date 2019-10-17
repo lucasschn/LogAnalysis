@@ -5,11 +5,15 @@ import pandas as pd
 import sys 
 sys.path.append('/Users/Lucas/Documents/Travail/Yuneec/LogAnalysis')
 sys.path.append('/home/lucas/Documents/Log_Analysis')
-# from work
-from pyulgresample.ulogdataframe import DfUlg, TopicMsgs
-# from home
-#import pyulgresample.pyulgresample as pyulgresample
-#from pyulgresample.pyulgresample.ulogdataframe import DfUlg, TopicMsgs
+import platform
+if platform.system() == 'Linux':
+    #  from work
+    from pyulgresample.ulogdataframe import DfUlg, TopicMsgs
+if platform.system() == 'Darwin':
+    # from home
+    import pyulgresample.pyulgresample as pyulgresample
+    from pyulgresample.pyulgresample.ulogdataframe import DfUlg, TopicMsgs
+
 import datetime
 import os
 

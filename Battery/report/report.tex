@@ -1,8 +1,10 @@
 \documentclass{article}
 
+\usepackage[margin=1.8cm]{geometry}
 \usepackage{fancyref}
 \usepackage{float}
 \usepackage{graphicx}
+\usepackage{amsmath}
 
 \title{H520 Battery State of Charge Estimator}
 
@@ -11,14 +13,14 @@
 
 \section{State of charge and problem description}
 
-The aim of the project is to estimate precisely the state of charge $z(t)$ of a battery. Estimation is required because the state of charge is defined as \
+The aim of the project is to estimate precisely the state of charge $z(t)$ of the H520 battery. Estimation is required because the state of charge is defined as \
 
 \begin{equation}
-\frac{avg concentration of charges}{maximum concentration of charges}
+z = \frac{\text{avg. concentration of charges}}{\text{max. concentration of charges}}
 \end{equation}
 
-which is not possible to measure directly, as we are not opening the battery. The only available measurements to us are the current and the voltage measurement. In a battery electrical model, the \textit{current} $i(t)$ is considered as the input and the \textit{load} or \textit{terminal voltage} $v(t)$ is the output. Due to control system notations, this signals will sometimes be denoted $u(t)$ for the input and $y(t)$ for the output in the following.
-The state of charge is then equal to 1 when the battery holds as many charges as it can. This quantity of charges is denoted $Q$, and to when it is fully discharged. Sometimes, the concepts of fully charged and fully discharged can be a bit vague. That is why the full and empty state of charge are defined by the battery manufacturer. In the case of the H520, the battery states are defined as follows :
+\noindent which is not possible to measure directly, as we are not opening the battery and counting the charges inside. The only measurements available to us are the current and the voltage measurements. In a battery electrical model, the \textit{current} $i(t)$ is considered as the input and the \textit{load} or \textit{terminal voltage} $v(t)$ is the output. Due to control system notations, this signals will sometimes be alternatively denoted $u(t)$ for the input and $y(t)$ for the output in the following.
+The state of charge is then equal to 1 when the battery holds the maximum amount of charges that it can. On the other hand, the state of charge $z$ is equal to zero to when it is fully discharged. The difference in amount of charges between this two states is denoted $Q$. Sometimes, the concepts of fully charged and fully discharged can be a bit vague. That is why the full and empty states of charge are defined by the battery manufacturer. In the case of the H520, the battery states are defined as follows :
 
 \begin{table}[h]
 \centering
@@ -34,28 +36,27 @@ The state of charge is then equal to 1 when the battery holds as many charges as
 \label{maxSOCOCV}
 \end{table}
 
-where the open circuit voltage is the value of the terminal voltage (measured by the voltage sensor) when the battery is at equlibrium, meaning that it has been rested for long enough. The state of charge evolves between 1 and 0 in direct correlation to the current that has been drawn from thre battery. The current acts as pumping charges out or in the reservoir of charge, the battery. 
+\noindent where the open circuit voltage (OCV) is the value of the terminal voltage (measured by the voltage sensor) when the battery is at equilibrium, meaning that it has been rested for long enough. The state of charge evolves between 1 and 0 in direct correlation with the current that has been drawn from the battery. The current acts as pumping charges out (or in) the reservoir of charges, the battery. 
 
 \begin{equation}
     \dot{z}(t) = -\frac{i(t)}{Q} \Leftrightarrow z(t) = z(t_0) - \frac{1}{Q} \int_{t_0}^t i(\tau) dt
 \label{SOCfromi}
 \end{equation}
 
-One could say that \ref{SOCfromi} is enough to estimate the state of charge of a battery. However, due to the integral, any biais in the current measurement would lead to an accumulation of error. Also, the voltage meaurement has not been used and this information is then lost, instead of enhancing the precision of the estimation.
-Unfortunately, the relationship between the state of charge and the terminal voltage to be measured is not starightforward and involves some king of modelisation of the battery. Indeed, the terminal voltage is a dydnamic quantity that is strongly influenced not only by how much current is drawn from the battery at this moment battery, but also on the current history. This is why a dynamic system model is needed. 
+One could say that \ref{SOCfromi} is enough to estimate the state of charge of a battery. However, due to the integration, any bias in the current measurement would lead to an accumulation of error. Also, the voltage measurement has not been used and this information is then lost, instead of enhancing the precision of the estimation.
+Unfortunately, the relationship between the state of charge and the terminal voltage to be measured is not straightforward and involves some kind of modelling of the battery. Indeed, the terminal voltage is a dynamic quantity that is strongly influenced not only by how much current is drawn from the battery at this moment, but also by the current history. This is why a dynamic model is needed. 
 
 
 \section{Equivalent circuit model}
 
 A battery is an electro-chemical system. It undergoes simultaneously electrical and chemical processes, such as ions diffusion, resistance-due voltage drops, etc. 
 
-However, in order to describe it with difference equations, it is useful to make an analogy with as a purely electrical system, having the same properties. This electrical system can be linear or nonlinear depending if hysteresis has to be taken into account or not. Also, the linear part is constituted, like in any other linear system, of a certain number of poles and this number has to be decided. It will then lead to a certain number of linear element in the circuit, in particular resistances and capacitors. 
+However, in order to describe it with difference equations, it is useful to make an analogy with as a purely electrical system having the same properties. This electrical system can be linear or nonlinear depending if hysteresis has to be taken into account or not. Also, the linear part is constituted, like in any other linear system, of a certain number of poles and this number has to be decided. It will then lead to a certain number of linear elements in the circuit, in particular resistances and capacitors. 
 A basic system that contains enough dynamics to have a good overview of the role of each element is the Thevenin model. Its characteristics are : 
 
 \begin{enumerate}
 \item Linear elements only 
 \item One pole pair of resistance-capacitor, plus one pole due to the integral effect of the state of charge on the input (the current), leading to a two poles system. 
-
 \end{enumerate}
 
 
@@ -63,9 +64,158 @@ The Thevenin Equivalent Circuit (EC) model presents as shown on Figure \ref{fig:
 
 \begin{figure}[h]
     \centering
-    \includegraphics[width=\linewidth]{Thevenin_model.png}
+    \includegraphics[width=0.5\linewidth]{Thevenin_model.png}
     \caption{Thevenin Equivalent Circuit Model}
     \label{fig:Thevenin_model}
 \end{figure}
+
+The challenge of evaluating the system parameters is now split in two parts :
+
+\begin{enumerate}
+\item The static parameters : the battery capacity $Q$ and the OCV curve $OCV(z)$.
+\item The dynamic parameters : the resistances $R_0 $ and $R_1$, and the capacitance $C_1$.
+\end{enumerate}
+
+The difference and algebraic equations that describe the model can be derived from a standard linear circuit analysis. Let us do it quickly here. 
+Using Kirchhoff's current law at the point were the two branches merge into $R_0$, it can be seen that
+
+\begin{equation}
+i_{R_1} + i_{C_1} = i_{R_0} = i(t)
+\end{equation} 
+
+\noindent Using Kirchhoff's voltage law on the branch loop, $v_R = R \cdot i$ and $i_C = C \cdot \dot{v}_{C_1}$, it can also be shown that $ V_{C_1} = V{R_1}$. That yields :
+
+\begin{equation}
+	i_{R_1} + C_1 \dot{v}_{C_1} = i(t) \Leftrightarrow i_{R_1} + C_1 \frac{d}{dt}(R_1 i_{R_1}) = i(t)
+\end{equation}
+
+\noindent and finally 
+
+\begin{equation}
+\frac{di_{R_1}(t)}{dt} = \frac{-1}{R_1 C_1}i_{R_1}(t) + \frac{1}{R_1 C_1} i(t)
+\label{ODER1}
+\end{equation}
+
+Equations \eqref{SOCfromi} and \eqref{ODER1} are enough to form the two dynamical equations of the state space representation of the system. However, in order to be used in a discrete time controller, one still has to transform the differential equations into difference equations, as shown here. 
+
+\begin{align}
+ & z(k+1) = z(k) - \frac{\Delta t}{Q} i(k) \\
+ & i_{R_1} (k+1) = \alpha i_{R_1} (k) + [1 - \alpha ] i(k) 
+\end{align}
+
+\noindent with $\alpha = \exp(\frac{-\Delta t}{R_1 C_1})$ and $\Delta t$ the time resolution of the simulation or the controller, in other words $\Delta t = t(k+1) - t(k)$. Finally, the output equation is obtained with Kirchhoff's voltage law on the big loop: 
+
+\begin{equation}
+v(k) = OCV(z(k)) - v_{R_1}(k) - v_{R_0} (k) \Leftrightarrow v(k) = OCV(z(k)) - R_1 i_{R_1}(k) - R_0 i(k)
+\label{eq:output}
+\end{equation}
+
+We can now summarize and put it into a proper state space form, with the exception that the output is not linear. Indeed, as shown on Figure \ref{fig:OCVvsSOC}, $OCV(z)$ cannot be reasonably approximated by a linear equation. This is why the nonlinear output equation is kept in the following. 
+
+\begin{align}
+ & x(k+1) = Ax(k) + Bu(k) \\
+ & y(k) = OCV(x_1(k)) - R_1x_2(k) - R_0 u(k)
+\end{align}
+
+\noindent with the matrices A and B being: 
+
+\[ A=\left[ \begin{array}{cc}
+1 & 0 \\
+0 & \alpha
+\end{array} \right]
+%
+\text{ and } B=\left[ \begin{array}{cc}
+\frac{-\Delta t}{Q} \\
+1 - \alpha
+\end{array} \right]
+\]
+
+
+\subsection{Static parameters estimation}
+
+The static parameters estimation can be done with a simple test procedure. First, the battery is charged to $z=1$, with the OCV stable at 4.35V. Then, the battery is slowly discharged with 0.2A, while measuring the current and the voltage. This can take a couple of days. Since the discharge is very slow, the battery is assumed to be at equilibrium during the whole process. The current as a function of time  $i(t)$ is integrated using Eq. \ref{SOCfromi} to obtain $z(t)$. The time evolutions of the state of charge $z(t)$ and the voltage $v(t)$ can now be merged together to obtain the voltage as a function of the state of charge. As the battery was assumed to be at equilibrium during the discharge, this can be assimilated to $OCV(z)$. The aspect of the last curve is shown in Figure \ref{fig:OCVvsSOC} below.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.7\linewidth]{OCVvsSOC.png}
+\caption{Open Circuit Voltage as a function of State of Charge, based on a 200mA discharge.}
+\label{fig:OCVvsSOC}
+\end{figure}
+
+
+Finally, the capacity is computed by integrating the current over time, $Q = \int_0^\infty i(t) dt$.
+ 
+\subsection{Dynamic parameters estimation}
+
+The dynamic parameters are way harder to estimate than the static ones, because they might be very sensitive to the input/output data they are estimated from. Two approaches have been tried up to now : non-linear optimization and subspace system identification. 
+
+\subsubsection{Non-linear optimization}
+
+As a reminder, the parameters that we want to optimize for are $R_0$,$R_1$ and $C_1$. But what do we want to optimize ? Well, we want to minimize the difference between our model and the real output data, that is : 
+
+\begin{equation}
+e_y = y - \hat{y} = OCV(z) -OCV(\hat{z}) - R_1( i_{R_1} - \hat{i}_{R_1}) - R_0(i - \hat{i})
+\end{equation}
+
+Since the input $i(t)$ is perfectly known, $i-\hat{i}$ is zero. Also, since $OCV(z)$ is not a linear function, the two first terms cannot be grouped together. In this function, $R_1$ and $C_1$ influence the time evolution of $i_{R_1}$ in a non-linear way, as the are placed inside an exponential. That is the reason why the optimization has to be non-linear. This results
+in a very resource-consuming computation.
+
+\subsubsection{Subspace system identification}
+
+The subspace system identification allows us to find the matrices A, B, C and D based on input and output data only, and solely using linear algebra. This gives us the $\alpha$ coefficient, from which $R_1$ and $C_1$ can be easily derived. Therefore, this approach is computationally extremely light in comparison with the non-linear optimization. However, its logic is challenging to follow, as it will be shown here.
+
+The algorithm is based on the fact that 
+
+\begin{align}
+& y(k) = Cx(k) + Du(k) \Leftrightarrow \\
+& y(k) = CAx(k-1) + CBu(k-1) + Du(k) \Leftrightarrow \\
+& y(k) =  CA^2x(k-2) + CABu(k-2) + CBu(k-1) + Du(k-1) \Leftrightarrow \\ 
+& y(k) = CA^3x(k-3) + CA^2Bu(k-3) + CABu(k-2) + CBu(k-1) + Du(k) \Leftrightarrow \\
+& y(k) = CA^nx(k-n) + \sum_{i=0}^{n-1} CA^iBu(k-1-i) + Du(k) \Leftrightarrow \\
+\end{align}
+
+\noindent setting $n=k$, we obtain : 
+
+\begin{equation}
+y(k) = CA^nx(0) + \sum_{i=0}^{k-1} CA^iBu(k-1-i) + Du(k)
+\end{equation}
+
+\noindent which can be written as : 
+
+\[
+\left[ \begin{array}{c}
+y(0) \\
+y(1) \\
+y(2) \\
+\vdots \\
+y(n)
+\end{array} \right]
+%
+= \underbrace{\left[ \begin{array}{c}
+C \\
+CA \\
+CA^2 \\
+\vdots \\
+CA^n
+\end{array} \right]}_{\mathcal{O}}
+%
+x(0)
+%
++ \underbrace{\left[ \begin{array}{ccccc}
+D & 0 & 0 & \dots & 0\\
+CB & D & 0 & \dots & 0\\
+CAB & CB & D & \ddots & \vdots \\
+\vdots & \vdots & \ddots & \ddots  & 0\\
+CA^{n-1}B & CA^{n-2}B & \dots & CB & D
+\end{array} \right]}_{\Psi}
+%
+\left[ \begin{array}{cc}
+u(0) \\
+u(1) \\
+u(2) \\
+\vdots \\
+u(n)
+\end{array} \right]
+\]
 
 \end{document}
