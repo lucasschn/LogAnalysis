@@ -197,8 +197,12 @@ def logextract(path,topic_list=None):
             battery_filtered_voltage = data_bs['voltage_filtered_v']
             discharged_mah = data_bs['discharged_mah']
             remaining = data_bs['remaining']
-            n_cells = data_bs['cell_count']    
-            info.update({'time_bs':time_bs,'n_cells':n_cells, 'battery_current':battery_current, 'battery_filtered_current': battery_filtered_current,'battery_voltage': battery_voltage, 'battery_filtered_voltage':battery_filtered_voltage, 'discharged_mah': discharged_mah,'remaining': remaining})
+            iR1 = data_bs['resistor_current']
+            n_cells = data_bs['cell_count'] 
+            covx = np.array([[data_bs['covx[0]'],data_bs['covx[1]']],[data_bs['covx[2]'],data_bs['covx[3]']]])
+            kalman_gain = np.array([[data_bs['kalman_gain[0]']],[data_bs['kalman_gain[1]']]])
+            innovation = data_bs['innovation']   
+            info.update({'time_bs':time_bs,'n_cells':n_cells,'battery_current':battery_current,'battery_filtered_current':battery_filtered_current,'battery_voltage':battery_voltage,'battery_filtered_voltage':battery_filtered_voltage,'discharged_mah':discharged_mah,'remaining':remaining,'covx':covx,'kalman_gain':kalman_gain,'innovation':innovation,'iR1':iR1})
     return info
 
 def logscore(info):
@@ -252,7 +256,21 @@ def pathfromgazebo(date,time,firmware='yuneec'):
         folder = '/home/lucas/src/yuneec/Firmware/build/px4_sitl_default/tmp/rootfs/log'
     elif firmware == 'px4':
         folder = '/home/lucas/src/px4/Firmware/build/px4_sitl_default/tmp/rootfs/log'
-    path = f'{folder}/{date}/{time}.ulg'
+    dates = os.listdir(folder)
+    if date in dates:
+        times = os.listdir(f'{folder}/{date}')
+        if f'{time}.ulg' in times:
+            path = f'{folder}/{date}/{time}.ulg'
+        else:
+            print(f'Time {time} does not have any log. List of available times is:')
+            for time in sorted(times):
+                print(time)
+            raise IOError
+    else:
+        print(f'Date {date} does not have any log. List of available dates is:')
+        for date in sorted(dates):
+            print(date)
+            raise IOError
     return path
 
 # default arguments for pathfromQGC

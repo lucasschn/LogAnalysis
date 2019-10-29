@@ -110,6 +110,8 @@ class OCVcurve:
         self.OCV = segment.cell_voltage
         self.current = segment.current
         self.mode = segment.mode
+        self.interpOCV = interp1d(self.SOC,self.OCV)
+        self.interpSOC = interp1d(self.OCV,self.SOC)
 
     def intrescorr(self,R0):
         ''' Corrects OCV curve with internal resistance R0.'''
