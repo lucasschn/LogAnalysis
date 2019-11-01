@@ -221,4 +221,48 @@ u(n)
 \section{Kalman Filter}
 In order to compute the state of charge of the battery on board, the model derived in the previous section is used in a Kalman filter. 
 
+The Kalman filter consists in two main steps, prediction and measurement update. The equations are detailed as follows. 
+
+State predicition based on the model : 
+\begin{equation}
+\hat{x}(k+1) = A\hat{x}(k) + Bu 
+\label{eq:1a} 
+\end{equation}
+
+Covariance of states prediction :
+\begin{equation}
+\text{Cov}_x (k+1) = A\text{Cov}_x(k)A^T + \text{Cov}_w  
+\label{eq:1b}
+\end{equation}
+
+Output prediction based on the model :
+\begin{equation}
+\hat{y}(k) = \text{OCV}(\hat{x}_1(k)) - R_1 \hat{x}_2(k) - R_0u
+\label{eq:1c}
+\end{equation}
+
+Kalman gain computation :
+\begin{equation}
+L = \text{Cov_x} C^T (C \text{Cov_x} C^T)^{-1}
+\label{eq:2a}
+\end{equation}
+
+State measurement correction
+\begin{equation}
+\hat{x} = \hat{x} + L(y-\hat{y})
+\label{eq:2b}
+\end{equation}
+
+Covariance of states measurement update (in Joseph form for improved numerical robustness, i.e. no subtraction)
+\begin{equation}
+\text{Cov_x} = (I-LC)^T \text{Cov_x} (I-LC)^T + L \text{Cov_v} L^T
+\label{eq:2c}
+\end{equation}
+
+\subsection{Filtered current}
+The current is filtered in order to remove the startup current spikes due to the motor starting up.
+
+\subsection{State saturation}
+The SOC is constrained between 0 and 1.
+
 \end{document}

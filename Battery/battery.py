@@ -352,6 +352,29 @@ class Thevenin(Battery):
         self.C = np.array([self.OCVcurve.getslope(self.z), -self.R1],dtype=float)
         self.D = np.array([-self.R0],dtype=float)
 
+    def varsim(self,time,current,curve=[]):
+        ''' Simulation with variable stepsize'''
+
+        self.varsimt = time
+        self.varsimi = current
+        
+        if OCVcurve!=[]:
+            self.OCVcurve = curve
+        
+        self.varsimx = np.array([[self.z],[0]])
+        self.varsimv = []
+        self.varsimdt = [np.mean(np.diff(self.varsimt))] + list(np.diff(self.varsimt))
+
+        for k in range(len(self.lsimt)):
+            self.statespace(self.varsimdt[k])
+            if k ==0 :
+                self.varsimx = np.concatenate([self.varsimx,self.A@np.reshape(self.varsimx[:,k],(2,1))+self.B*self.varsimi[k]],axis=1)
+                self.varsimv.append(self.OCVcurve.OCVfromSOC(self.varsimx[0,k])-self.R0*self.varsimi[k]-self.R1*self.varsimx[1,k])
+            else : 
+                self.varsimx = np.concatenate([self.varsimx,self.A@np.reshape(self.varsimx[:,k],(2,1))+self.B*self.varsimi[k]],axis=1)
+                self.varsimv.append(self.OCVcurve.OCVfromSOC(self.varsimx[0,k])-self.R0*self.varsimi[k]-self.R1*self.varsimx[1,k])
+    
+        return self.varsimv
 
     def lsim(self,time,current,OCVcurve,plot=False):
 
@@ -437,6 +460,10 @@ class Thevenin(Battery):
     def kfupdate(self,u,y):
         #1a
         self.xhat = np.reshape(self.A@self.xhat,(2,1)) + self.B*u
+        if self.xhat[0] > 1.0:
+            self.xhat[0] = 1.0
+        elif self.xhat[0] < 0.0:
+            self.xhat[1] = 0.0
         #1b
         self.covx = self.A@self.covx@self.A.T + self.covw
         #1c

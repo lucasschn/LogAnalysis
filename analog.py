@@ -197,12 +197,16 @@ def logextract(path,topic_list=None):
             battery_filtered_voltage = data_bs['voltage_filtered_v']
             discharged_mah = data_bs['discharged_mah']
             remaining = data_bs['remaining']
-            iR1 = data_bs['resistor_current']
             n_cells = data_bs['cell_count'] 
-            covx = np.array([[data_bs['covx[0]'],data_bs['covx[1]']],[data_bs['covx[2]'],data_bs['covx[3]']]])
-            kalman_gain = np.array([[data_bs['kalman_gain[0]']],[data_bs['kalman_gain[1]']]])
-            innovation = data_bs['innovation']   
-            info.update({'time_bs':time_bs,'n_cells':n_cells,'battery_current':battery_current,'battery_filtered_current':battery_filtered_current,'battery_voltage':battery_voltage,'battery_filtered_voltage':battery_filtered_voltage,'discharged_mah':discharged_mah,'remaining':remaining,'covx':covx,'kalman_gain':kalman_gain,'innovation':innovation,'iR1':iR1})
+            try : 
+                iR1 = data_bs['resistor_current']
+                covx = np.array([[data_bs['covx[0]'],data_bs['covx[1]']],[data_bs['covx[2]'],data_bs['covx[3]']]])
+                kalman_gain = np.array([[data_bs['kalman_gain[0]']],[data_bs['kalman_gain[1]']]])
+                innovation = data_bs['innovation']   
+                info.update({'covx':covx,'kalman_gain':kalman_gain,'innovation':innovation,'iR1':iR1})
+            except:
+                pass
+            info.update({'time_bs':time_bs,'n_cells':n_cells,'battery_current':battery_current,'battery_filtered_current':battery_filtered_current,'battery_voltage':battery_voltage,'battery_filtered_voltage':battery_filtered_voltage,'discharged_mah':discharged_mah,'remaining':remaining})
     return info
 
 def logscore(info):
