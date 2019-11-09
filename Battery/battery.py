@@ -122,7 +122,7 @@ class OCVcurve:
         
 
     def getslope(self,z):
-        slope = (self.OCVfromSOC(min(1.0,z+0.01))-self.OCVfromSOC(max(0.0,z-0.01)))/(min(1.0,z+0.01)-max(0.0,z-0.01))
+        slope = (self.OCVfromSOC(min(1.0,z+0.01))-self.OCVfromSOC(max(1e-3,z-0.01)))/(min(1.0,z+0.01)-max(1e-3,z-0.01))
         # sorted_SOC = self.SOC.sort_values()
         # slopes = np.diff(self.OCV)/np.diff(self.SOC)
         # for k in range(len(self.SOC)):
