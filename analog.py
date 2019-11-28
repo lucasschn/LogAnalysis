@@ -201,13 +201,29 @@ def logextract(path,topic_list=None):
             try : 
                 iR1 = data_bs['resistor_current']
                 covx = np.array([[data_bs['covx[0]'],data_bs['covx[1]']],[data_bs['covx[2]'],data_bs['covx[3]']]])
+                covw = np.array([[data_bs['covw[0]'],data_bs['covw[1]']],[data_bs['covw[2]'],data_bs['covw[3]']]])
                 kalman_gain = np.array([[data_bs['kalman_gain[0]']],[data_bs['kalman_gain[1]']]])
                 innovation = data_bs['innovation']   
-                info.update({'covx':covx,'kalman_gain':kalman_gain,'innovation':innovation,'iR1':iR1})
+                info.update({'covx':covx,'covw':covw,'kalman_gain':kalman_gain,'innovation':innovation,'iR1':iR1})
             except:
                 pass
             info.update({'time_bs':time_bs,'n_cells':n_cells,'battery_current':battery_current,'battery_filtered_current':battery_filtered_current,'battery_voltage':battery_voltage,'battery_filtered_voltage':battery_filtered_voltage,'discharged_mah':discharged_mah,'remaining':remaining})
     return info
+
+def logextract_multi(folder):
+    files = os.listdir(folder)
+    time = np.array([])
+    current = np.array([])
+    voltage = np.array([])
+    tstoplist = [0]
+    for file in sorted(files):
+        print(file)
+        info = logextract(f'{folder}/{file}','battery_status')
+        time = np.append(time,info['time_bs']- info['time_bs'][0] + tstoplist[-1])
+        tstoplist.append(time[-1])
+        current = np.append(current,info['battery_current'])
+        voltage = np.append(voltage,info['battery_voltage']/4)
+    return time,current,voltage
 
 def logscore(info):
     """ Returns the acceleration score, the peak score and the high-frequencies score computed for the parameters passed as arguments."""
