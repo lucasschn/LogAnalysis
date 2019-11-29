@@ -447,23 +447,25 @@ class Thevenin(Battery):
         return self.simv
 
 
-    def kfinit(self):
+    def kfinit(self,covw,covx0):
         self.xhat = np.array([[self.z],[0.]]) # is a stack of 2x1 arrays = a 2xk array
-        self.covx = np.array([[1e-4,0.],[0., .1]]) # is a stack of 2x2 arrays
+        if covx0==[]:
+            self.covx = np.array([[1e-4,0.],[0., .1]]) # is a stack of 2x2 arrays
+        else:
+            self.covx = covx0
 
-        self.covw = np.array([[0.05, 0.],[0., 0.]]) # is a constant 2x2 array
-        self.covv = 0.5017 # is a constant 1x1 array
+        if covw==[]:
+            self.covw = np.array([[0.05, 0.],[0., 0.]]) # is a constant 2x2 array
+        else:
+            self.covw = covw
+
+        self.covv = 0.5017 + 0.5 # is a constant 1x1 array
 
         self.u = 0 # is a stack of 1x1 arrays = a 1-D array
-        self.yhat = None 
+        self.yhat = self.OCVcurve.OCVfromSOC(self.xhat[0]) - self.R1*self.xhat[1]
 
     def kfupdate(self,u,y):
-        #1a
-        self.xhat = np.reshape(self.A@self.xhat,(2,1)) + self.B*u
-        if self.xhat[0] > 1.0:
-            self.xhat[0] = 1.0
-        elif self.xhat[0] < 0.0:
-            self.xhat[1] = 0.0
+
         #1b
         self.covx = self.A@self.covx@self.A.T + self.covw
         #1c
@@ -471,9 +473,37 @@ class Thevenin(Battery):
         #2a
         covxy = np.reshape(self.covx@self.C.T,(2,1))
         covy = self.C@self.covx@self.C.T + self.covv
-        L = covxy/covy
-        #2b
+        self.L = covxy/covy
+        #1a & #2b
         inno = y - self.yhat
-        self.xhat = np.reshape(self.xhat + L*inno,(2,1))
+
+        if inno > 0.05:
+            inno = .05
+        elif inno < -0.05:
+            inno = -0.05
+
+        self.xhat = np.reshape(self.A@self.xhat + self.B*u + self.L*inno,(2,1))
+
+        if self.xhat[0] > 1.0:
+            self.xhat[0] = 1.0
+        elif self.xhat[0] < 0.0:
+            self.xhat[1] = 0.0
+
         #2c
-        self.covx = self.covx - L*self.C@self.covx
+        self.covx = self.covx - self.L*self.C@self.covx
+
+    def kfrun(self,t,u,y,covw=[],covx0=[]):
+        self.statespace(t[1]-t[0])
+        self.kfinit(covw,covx0)
+        xhat = self.xhat
+        covx = self.covx
+        yhat = self.yhat
+        L =  np.reshape(self.covx@self.C.T/(self.C@self.covx@self.C.T + self.covv),(2,1))
+        for k in range(1,len(u)):
+            self.statespace(t[k]-t[k-1])
+            self.kfupdate(u[k],y[k])
+            xhat = np.concatenate([xhat,self.xhat],axis=1)
+            covx =  np.dstack([covx,self.covx])
+            yhat = np.concatenate([yhat,self.yhat])
+            L = np.concatenate([L,self.L],axis=1)
+        return xhat,covx,yhat,L
