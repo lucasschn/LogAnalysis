@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import datetime
 from analog import logextract
 from os import listdir
-
+from scipy.stats import chi2
 class segment:
 
     def __init__(self,mode=None,path2csv=None):
@@ -447,7 +447,7 @@ class Thevenin(Battery):
         return self.simv
 
 
-    def kfinit(self,covw,covx0):
+    def kfinit(self,covw,covx0,alpha=0.05):
         self.xhat = np.array([[self.z],[0.]]) # is a stack of 2x1 arrays = a 2xk array
         if covx0==[]:
             self.covx = np.array([[1e-4,0.],[0., .1]]) # is a stack of 2x2 arrays
@@ -460,7 +460,7 @@ class Thevenin(Battery):
             self.covw = covw
 
         self.covv = 0.5017 + 0.5 # is a constant 1x1 array
-
+        self.chisquare = chi2.ppf(1-alpha,df=1)  # upper bound for nees based on Chi2 test, with m degrees of freedom and 1-alpha confidence
         self.u = 0 # is a stack of 1x1 arrays = a 1-D array
         self.yhat = self.OCVcurve.OCVfromSOC(self.xhat[0]) - self.R1*self.xhat[1]
 
@@ -471,14 +471,20 @@ class Thevenin(Battery):
         #1c
         self.yhat = self.OCVcurve.OCVfromSOC(self.xhat[0]) - self.R1*self.xhat[1] + self.D*u
         #2a
+
+        # Voltage sensor fault detection:
         covxy = np.reshape(self.covx@self.C.T,(2,1))
         covy = self.C@self.covx@self.C.T + self.covv
-        self.L = covxy/covy
+        nees = y*1/covy*y # normalized estimation error squared
+        if nees < self.chisquare:
+            self.L = np.reshape(covxy/covy,(2,1))
+        else:
+            self.L = np.reshape([0,0],(2,1))
         #1a & #2b
         inno = y - self.yhat
 
         if inno > 0.05:
-            inno = .05
+            inno = 0.05
         elif inno < -0.05:
             inno = -0.05
 
@@ -499,6 +505,7 @@ class Thevenin(Battery):
         covx = self.covx
         yhat = self.yhat
         L =  np.reshape(self.covx@self.C.T/(self.C@self.covx@self.C.T + self.covv),(2,1))
+        # equivalent to updateStatus
         for k in range(1,len(u)):
             self.statespace(t[k]-t[k-1])
             self.kfupdate(u[k],y[k])

@@ -198,16 +198,18 @@ def logextract(path,topic_list=None):
             discharged_mah = data_bs['discharged_mah']
             remaining = data_bs['remaining']
             n_cells = data_bs['cell_count'] 
-            try : 
-                iR1 = data_bs['resistor_current']
-                covx = np.array([[data_bs['covx[0]'],data_bs['covx[1]']],[data_bs['covx[2]'],data_bs['covx[3]']]])
-                covw = np.array([[data_bs['covw[0]'],data_bs['covw[1]']],[data_bs['covw[2]'],data_bs['covw[3]']]])
-                kalman_gain = np.array([[data_bs['kalman_gain[0]']],[data_bs['kalman_gain[1]']]])
-                innovation = data_bs['innovation']   
-                info.update({'covx':covx,'covw':covw,'kalman_gain':kalman_gain,'innovation':innovation,'iR1':iR1})
-            except:
-                pass
             info.update({'time_bs':time_bs,'n_cells':n_cells,'battery_current':battery_current,'battery_filtered_current':battery_filtered_current,'battery_voltage':battery_voltage,'battery_filtered_voltage':battery_filtered_voltage,'discharged_mah':discharged_mah,'remaining':remaining})
+        elif topic.name == 'battery_status_ekf':
+            data_bkf = topic.data
+            time_bkf = data_bkf['timestamp']/1e6
+            remaining_ekf = data_bkf['remaining']
+            iR1 = data_bkf['resistor_current']
+            covx = np.array([[data_bkf['covx[0]'],data_bkf['covx[1]']],[data_bkf['covx[2]'],data_bkf['covx[3]']]])
+            covw = np.array([[data_bkf['covw[0]'],data_bkf['covw[1]']],[data_bkf['covw[2]'],data_bkf['covw[3]']]])
+            kalman_gain = np.array([[data_bkf['kalman_gain[0]']],[data_bkf['kalman_gain[1]']]])
+            innovation = data_bkf['innovation']   
+            info.update({'time_bkf':time_bkf,'remaining_ekf':remaining_ekf,'covx':covx,'covw':covw,'kalman_gain':kalman_gain,'innovation':innovation,'iR1':iR1})
+
     return info
 
 def logextract_multi(folder):
