@@ -97,6 +97,8 @@ class OCVcurve:
         if path2csv != None :
             self.setOCVfromcsv(path2csv)    
 
+        self.poly_coeff = np.polyfit(self.SOC,self.OCV,11)
+        print(f'Polynomial coefficients are {self.poly_coeff}')
 
     def setOCVfromcsv(self,path):
         self.csv_file = pd.read_csv(path)
@@ -137,9 +139,12 @@ class OCVcurve:
         return slope
  
 
-    def OCVfromSOC(self,z):
-        v = self.interpOCV(z)
-        return v
+    def OCVfromSOC(self,SOC):
+        #OCV = self.interpOCV(SOC)
+        OCV = 0
+        for poly_expo  in range(len(self.poly_coeff)):
+            OCV += self.poly_coeff[len(self.poly_coeff) - 1 - poly_expo] * pow(SOC, poly_expo)
+        return OCV
     
 
     def SOCfromOCV(self,v):
@@ -349,7 +354,7 @@ class Thevenin(Battery):
         ''' Defines the state-space model matrices for the battery. States are x1=z and x2=iR1'''  
         self.A = np.array([[1.0, 0.],[0.,  np.exp(-dt/(self.R1*self.C1))]], dtype=float)
         self.B = np.array([[-self.coulombic_efficiency*dt/self.total_capacity],[1 - np.exp(-dt/(self.R1*self.C1))]],dtype=float)
-        self.C = np.array([self.OCVcurve.getslope(self.z), -self.R1],dtype=float)
+        self.C = np.reshape(np.array([self.OCVcurve.getslope(self.z), -self.R1],dtype=float),(1,2))
         self.D = np.array([-self.R0],dtype=float)
 
     def varsim(self,time,current,curve=[]):
@@ -447,7 +452,7 @@ class Thevenin(Battery):
         return self.simv
 
 
-    def kfinit(self,covw,covx0,alpha=0.05):
+    def kfinit(self,covw,covx0,alpha=0.1):
         self.xhat = np.array([[self.z],[0.]]) # is a stack of 2x1 arrays = a 2xk array
         if covx0==[]:
             self.covx = np.array([[1e-4,0.],[0., .1]]) # is a stack of 2x2 arrays
@@ -475,18 +480,20 @@ class Thevenin(Battery):
         # Voltage sensor fault detection:
         covxy = np.reshape(self.covx@self.C.T,(2,1))
         covy = self.C@self.covx@self.C.T + self.covv
-        nees = y*1/covy*y # normalized estimation error squared
+        
+        #1a & #2b
+        inno = y - self.yhat
+
+        # if inno > 0.05:
+        #     inno = 0.05
+        # elif inno < -0.05:
+        #     inno = -0.05
+
+        nees = inno*1/covy*inno # normalized estimation error squared
         if nees < self.chisquare:
             self.L = np.reshape(covxy/covy,(2,1))
         else:
             self.L = np.reshape([0,0],(2,1))
-        #1a & #2b
-        inno = y - self.yhat
-
-        if inno > 0.05:
-            inno = 0.05
-        elif inno < -0.05:
-            inno = -0.05
 
         self.xhat = np.reshape(self.A@self.xhat + self.B*u + self.L*inno,(2,1))
 
@@ -496,11 +503,14 @@ class Thevenin(Battery):
             self.xhat[1] = 0.0
 
         #2c
-        self.covx = self.covx - self.L*self.C@self.covx
+        tmp1 = (np.identity(2) - self.L@self.C)
+        tmp2 = (np.identity(2) - self.L@self.C).T
+        tmp3 = self.L@np.reshape(self.covv,(1,1))@self.L.T
+        self.covx = tmp1@self.covx@tmp2 + tmp3  
 
-    def kfrun(self,t,u,y,covw=[],covx0=[]):
+    def kfrun(self,t,u,y,covw=[],covx0=[],alpha=0.05):
         self.statespace(t[1]-t[0])
-        self.kfinit(covw,covx0)
+        self.kfinit(covw,covx0,alpha=alpha)
         xhat = self.xhat
         covx = self.covx
         yhat = self.yhat
