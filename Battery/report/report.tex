@@ -143,7 +143,7 @@ The static parameters estimation can be done with a simple test procedure. First
 \end{figure}
 
 
-Finally, the capacity is computed by integrating the current over time, $Q = \int_0^\infty i(t) dt$.
+Finally, the capacity is computed by integrating the current over time, $Q = \int_0^\infty i(t) dt = 6500$ mAh. This value still has to be converted to Coulombs to be used in the B matrix. 
  
 \subsection{Dynamic parameters estimation}
 
@@ -218,6 +218,10 @@ u(n)
 \end{array} \right]
 \]
 
+\subsection{Towards increasing the model's order}
+
+It seems like a better precision could be achieved if the model would contain three pairs of resistor-capacitor. This would yield a 4x4 A matrix and therefore 7 parameters to tune. This certainly cannot be done manually, it is therefore very important to master the subspace system identification or the nonlinear optimization method before implementing such a model.
+
 \section{Kalman Filter}
 In order to compute the state of charge of the battery on board, the model derived in the previous section is used in a Kalman filter. 
 
@@ -243,7 +247,7 @@ Output prediction based on the model :
 
 Kalman gain computation :
 \begin{equation}
-L = \text{Cov_x} C^T (C \text{Cov_x} C^T)^{-1}
+L = \text{Cov}_x C^T (C \text{Cov}_x C^T)^{-1}
 \label{eq:2a}
 \end{equation}
 
@@ -255,14 +259,43 @@ State measurement correction
 
 Covariance of states measurement update (in Joseph form for improved numerical robustness, i.e. no subtraction)
 \begin{equation}
-\text{Cov_x} = (I-LC)^T \text{Cov_x} (I-LC)^T + L \text{Cov_v} L^T
+\text{Cov}_x = (I-LC)^T \text{Cov}_x (I-LC)^T + L \text{Cov}_v L^T
 \label{eq:2c}
 \end{equation}
 
+In the firmware, the equations \eqref{eq:1a} and \eqref{eq:2b} are implement in only one step, i.e.: 
+
+\begin{equation}
+\hat{x}(k+1) = A\hat{x}(k) + Bu + L(y-\hat{y})
+\label{eq:state update}
+\end{equation}
+
+\noindent When doing this, it is important to make sure that the output equation is implemented before, so that the innovation is the most recent one.
+
 \subsection{Filtered current}
-The current is filtered in order to remove the startup current spikes due to the motor starting up.
+The current can be filtered in order to remove the start-up current spikes due to the motor starting to rotate. However, this is better done with the $\chi^2$ sensor fault detector detailed in the corresponding section.
+
+\subsection{Sensor fault detection}
+The voltage sensor is subject to faults. These fault are detected using a $\chi^2$-test.
+
+Indeed, the normalized error estimate squared (NEES) of the voltage follows a $\chi^2$ distribution :
+
+\begin{equation}
+NEES = \frac{\tilde{y}^2}{\text{Cov}_y}
+\label{nees}
+\end{equation}
+
+\noindent where $\tilde{y} = y - \hat{y}$, the innovation. The value of a the $\chi^2$ distribution for $m=1$ degree of freedom and a confidence interval of $\alpha$ is computed. The retained value for the tested H520 is $\alpha=0.9$, which in turn yields $\chi^2(m,\alpha)=0.015791$. Then, whenever the NEES is higher than this bound, the sample has 90\% chances to be a faulty measurement so the Kalman gain is set to 0 and the measurement plays no role in the state estimate update, meaning that this update will be done only based on the model prediction. \\
+
+Regarding the start-up spikes evoked in the section about current filtering, the trick is that the value for $\alpha$ is tuned so that current spikes due to motor star-up are also discarded.
+
+
 
 \subsection{State saturation}
-The SOC is constrained between 0 and 1.
+The SOC is constrained between 0 and 1, as only this interval makes physically sense. The saturation is at the moment hard-coded, meaning that the value of $\hat{x}$ is replaced by 0 or 1 if the estimate equation gives a value below or above these bounds.
+
+This method does not allow a consistent devaluation of the trust in the model in case the SOC is outside of the definition interval. Indeed, an increase of the Kalman gain should happen when the state estimate yielded by the model is inconsistent. 
+
+A solution could be to project the old state on a space bounded by 0 and 1, so that the new state tends to 1 when the old state tends to $\infty$, and to 0 when the old tends to $-\infty$, but this idea still needs to be explored. 
 
 \end{document}

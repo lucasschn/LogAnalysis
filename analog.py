@@ -203,7 +203,10 @@ def logextract(path,topic_list=None):
             data_bkf = topic.data
             time_bkf = data_bkf['timestamp']/1e6
             remaining_ekf = data_bkf['remaining']
-            voltage_estimate = data_bkf['voltage_estimate']
+            try:
+                voltage_estimate = data_bkf['voltage_estimate']
+            except KeyError:
+                voltage_estimate = data_bkf['voltage_v'] - data_bkf['innovation']
             iR1 = data_bkf['resistor_current']
             covx = np.array([[data_bkf['covx[0]'],data_bkf['covx[1]']],[data_bkf['covx[2]'],data_bkf['covx[3]']]])
             covw = np.array([[data_bkf['covw[0]'],data_bkf['covw[1]']],[data_bkf['covw[2]'],data_bkf['covw[3]']]])
@@ -322,7 +325,7 @@ def pathfromQGC(folder,index=index,date=date,time=time):
 
     if found == False: 
         # no file starts with log_{index} in the folder
-        print(f'The given date & time or index does not correspond to any file. Please verify it.' )
+        print(f'The given date & time or index does not correspond to any file. Available files are : {files}.' )
     path = f'{folder}/{log_file}'
     return path 
 
